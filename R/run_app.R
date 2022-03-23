@@ -9,7 +9,9 @@
 #' @importFrom golem with_golem_options 
 run_app <- function(
   onStart = NULL,
-  options = list(), 
+  options = list(
+    shiny.autoreload = T
+  ), 
   enableBookmarking = NULL,
   uiPattern = "/",
   ...

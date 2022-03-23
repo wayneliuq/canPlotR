@@ -19,8 +19,8 @@
 ## to change the name in the app_sys() function in app_config.R /!\
 ## 
 golem::fill_desc(
-  pkg_name = "canGraphR", # The Name of the package containing the App 
-  pkg_title = "canGraphR", # The Title of the package containing the App 
+  pkg_name = "canPlotR", # The Name of the package containing the App 
+  pkg_title = "canPlotR", # The Title of the package containing the App 
   pkg_description = "PKG_DESC.", # The Description of the package containing the App 
   author_first_name = "Qiang (Wayne)", # Your First Name
   author_last_name = "Liu", # Your Last Name

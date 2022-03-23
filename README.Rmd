@@ -13,43 +13,37 @@ knitr::opts_chunk$set(
 )
 ```
 
-# canGraphR
+# canPlotR
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-The goal of canGraphR is to ...
+canPlotR is a browser-based tool to generate and export presentation- and publication-ready plots and figures. canPlotR aims to use an intuitive user interface to wrap ``ggplot2`` graphing functions to create professional and highly customizable figures required for most use cases.
 
 ## Installation
 
-You can install the development version of canGraphR like so:
+You can install the development version of canPlotR from Github so:
 
 ``` r
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
+# If you don't have the `devtools` package installed, you can install it from CRAN with
+# install.packages("devtools")
+library(devtools)
+install_github("wayneliuq/canplotr")
 ```
 
-## Example
+## How to Use
 
-This is a basic example which shows you how to solve a common problem:
+### Preparing the stacked input file
+Unlike most common applications for making plots (Excel, GraphPad), canPlotR is designed to use the much more versatile *stacked* tables to make plots.
+
+**To be updated**
+
+### Loading the app
+To run canPlotR, load the package and run it:
 
 ```{r example}
-library(canGraphR)
-## basic example code
+library(canPlotR)
+canPlotR::run_app()
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
-
-```{r cars}
-summary(cars)
-```
-
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this. You could also use GitHub Actions to re-render `README.Rmd` every time you push. An example workflow can be found here: <https://github.com/r-lib/actions/tree/v1/examples>.
-
-You can also embed plots, for example:
-
-```{r pressure, echo = FALSE}
-plot(pressure)
-```
-
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN.

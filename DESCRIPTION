@@ -1,17 +1,39 @@
-Package: canGraphR
+Package: canPlotR
 Title: An Amazing Shiny App
-Version: 0.0.0.9000
+Version: 0.0.1
 Authors@R: 
-    person(given = "firstname",
-           family = "lastname",
+    person(given = "Qiang (Wayne)",
+           family = "Liu",
            role = c("aut", "cre"),
-           email = "your@email.com")
-Description: What the package does (one paragraph).
+           email = "wayneliuq@gmail.com")
+Description: Intuitive shiny interface for creating presentation-ready plots.
 License: MIT + file LICENSE
 Imports: 
+    attempt,
     config,
+    DT,
+    glue,
     golem,
-    shiny
+    htmltools,
+    processx,
+    prompter,
+    reactable,
+    readr,
+    readxl,
+    shiny,
+    shinybusy,
+    shinythemes,
+    shinyWidgets,
+    sortable
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
+Suggests: 
+    spelling,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Language: en-US
+Depends: 
+    dplyr,
+    ggplot2,
+    R (>= 2.10)
