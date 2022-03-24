@@ -97,7 +97,38 @@ app_ui <- function(request) {
               #### choose type of plot ####
               tabPanel(
                 title = "3. Choose Plot",
-                "panel 3"
+                
+                fluidRow(
+                  
+                  ## choose the type of geom
+                  column(
+                    width = 12,
+                    
+                    ## inputId$geompoint = geom_point
+                    shinyWidgets::switchInput(
+                      inputId = "geompoint",
+                      label = "points",
+                      value = F,
+                      labelWidth = 300
+                    ) |> prompter::add_prompt(
+                      position = "top",
+                      message = "Display individual data points (geom_point)",
+                      size = "medium"
+                    ),
+                    
+                    ## inputId$geomsmooth_lm = geom_smooth(stat = "lm")
+                    shinyWidgets::switchInput(
+                      inputId = "geomsmooth_lm",
+                      label = "linear regression",
+                      value = F,
+                      labelWidth = 300
+                    ) |> prompter::add_prompt(
+                      position = "top",
+                      message = "Display individual data points (geom_point)",
+                      size = "medium"
+                    )
+                  )
+                )
               )
             )
           )
