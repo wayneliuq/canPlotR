@@ -10,9 +10,8 @@ app_server <- function( input, output, session ) {
   
   output$plot <- renderPlot(
     ggplot(
-      data_trans(), 
-      aes(x = get(input$xvar),
-          y = get(input$yvar))
+      data = data_get(), 
+      mapping = aes_cust()
     ) +
       
       # custom geom
@@ -81,7 +80,7 @@ app_server <- function( input, output, session ) {
   #### show data table preview ####
   output$datatable <- reactable::renderReactable({
     
-    reactable::reactable(data_trans(),
+    reactable::reactable(data_get(),
                          showPageSizeOptions = T,
                          pageSizeOptions = c(10, 25, 50, 100, 250, 500),
                          resizable = T,
@@ -151,33 +150,48 @@ app_server <- function( input, output, session ) {
     }
   })
   
+  ## conditionally set ggplot aes() mapping as factors
+  # this has the advantage of easily incorporating the z variable for drawing heatmaps??
+  aes_cust <- reactive({
+    if (input$x_asfactor & input$y_asfactor) {
+      aes(x = factor(get(input$xvar)), y = factor(get(input$yvar)))
+    } else if (input$x_asfactor) {
+      aes(x = factor(get(input$xvar)), y = get(input$yvar))
+    } else if (input$y_asfactor) {
+      aes(x = get(input$xvar), y = factor(get(input$yvar)))
+    } else {
+      aes(x = get(input$xvar), y = get(input$yvar))
+    }
+  }) 
+  
   ## mutate data as factors
   ## ?dplyr_data_masking to see data masking
   ## example_dr |> dplyr::mutate("{a}" := factor(.data[[a]]))
   
-    data_trans <- reactive({
-    if (!exists("input$x_asfactor") | !exists("input$y_asfactor")) {
-      data_get()
-    } else if (input$x_asfactor & input$y_asfactor) {
-      data_get() |> 
-        mutate(
-          "{input$xvar}" := factor(as.character(.data[[input$xvar]])),
-          "{input$yvar}" := factor(as.character(.data[[input$yvar]]))
-        )
-    } else if (input$x_asfactor) {
-      data_get() |> 
-        mutate(
-          "{input$xvar}" := factor(as.character(.data[[input$xvar]]))
-        )
-    } else if (input$y_asfactor) {
-      data_get() |> 
-        mutate(
-          "{input$yvar}" := factor(as.character(.data[[input$yvar]]))
-        )
-    } else {
-      data_get()
-    }
-  })
+  ## deprecate in favor of attempting to use ggplot mapping to factorize variables
+  #   data_trans <- reactive({
+  #   if (!exists("input$x_asfactor") | !exists("input$y_asfactor")) {
+  #     data_get()
+  #   } else if (input$x_asfactor & input$y_asfactor) {
+  #     data_get() |> 
+  #       mutate(
+  #         "{input$xvar}" := factor(as.character(.data[[input$xvar]])),
+  #         "{input$yvar}" := factor(as.character(.data[[input$yvar]]))
+  #       )
+  #   } else if (input$x_asfactor) {
+  #     data_get() |> 
+  #       mutate(
+  #         "{input$xvar}" := factor(as.character(.data[[input$xvar]]))
+  #       )
+  #   } else if (input$y_asfactor) {
+  #     data_get() |> 
+  #       mutate(
+  #         "{input$yvar}" := factor(as.character(.data[[input$yvar]]))
+  #       )
+  #   } else {
+  #     data_get()
+  #   }
+  # })
   
   ## transform or reorder x and y (numeric vs factor)
   trans_continuous <- c(
@@ -203,25 +217,19 @@ app_server <- function( input, output, session ) {
   # transformations will succeed
   
   x_scale_trans <- reactive({
-    if (data_trans() |> 
-        select(input$xvar) |> 
-        unlist() |> 
-        is.numeric()) {
+    if (data_get() |> select(input$xvar) |> unlist() |> is.numeric() & isFALSE(input$x_asfactor)) {
       scale_x_continuous(trans = input$xtrans)
     }
   })
   
   y_scale_trans <- reactive({
-    if (data_trans() |> 
-        select(input$yvar) |> 
-        unlist() |> 
-        is.numeric()) {
+    if (data_get() |> select(input$yvar) |> unlist() |> is.numeric() & isFALSE(input$y_asfactor)) {
       scale_y_continuous(trans = input$ytrans)
     }
   })
   
   output$transX <- renderUI({
-    if (data_trans() |> 
+    if (data_get() |> 
         select(input$xvar) |> 
         unlist() |> 
         is.numeric()) {
@@ -229,7 +237,7 @@ app_server <- function( input, output, session ) {
                   label = "x-axis transformation",
                   choices = trans_continuous,
                   selected = 1)
-    } else if (data_trans() |> 
+    } else if (data_get() |> 
                select(input$xvar) |> 
                unlist() |> 
                is.factor()) {
@@ -243,7 +251,7 @@ app_server <- function( input, output, session ) {
   })
   
   output$transY <- renderUI({
-    if (data_trans() |> 
+    if (data_get() |> 
         select(input$yvar) |> 
         unlist() |> 
         is.numeric()) {
@@ -251,7 +259,7 @@ app_server <- function( input, output, session ) {
                   label = "y-axis transformation",
                   choices = trans_continuous,
                   selected = 1)
-    } else if (data_trans() |> 
+    } else if (data_get() |> 
                select(input$yvar) |> 
                unlist() |> 
                is.factor()) {
