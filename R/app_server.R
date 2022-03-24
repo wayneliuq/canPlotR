@@ -7,26 +7,11 @@
 app_server <- function( input, output, session ) {
   #### plot elements as reactive expressions ####
   
-  ## numeric transformation
-  x_scale_trans <- reactive({
-    if (data_trans() |> 
-        select(input$xvar) |> 
-        unlist() |> 
-        is.numeric()) {
-      scale_x_continuous(trans = input$xtrans)
-    }
-  })
-  
-  y_scale_trans <- reactive({
-    if (data_trans() |> 
-        select(input$yvar) |> 
-        unlist() |> 
-        is.numeric()) {
-      scale_y_continuous(trans = input$ytrans)
-    }
-  })
+ 
   
   #### final output plot ####
+  # this is the ggplot2 function which will render the final plot
+  
   output$plot <- renderPlot(
     ggplot(
       data_trans(), 
@@ -34,13 +19,24 @@ app_server <- function( input, output, session ) {
           y = get(input$yvar))
     ) +
       geom_point() +
+      
+      # title
       labs(title = input$plotid) +
+      
+      #x-axis label
       xlab(input$xvar) +
+      
+      #y-axis label
       ylab(input$yvar) +
+      
+      # transform the x and y axis depending on user input
       x_scale_trans() +
       y_scale_trans() +
+      
+      #theme, to be customized
       theme_bw()
   ) |> 
+    # plot only updates when button is pressed
     bindEvent(input$makeplot)
 
   #### load data ####
@@ -87,7 +83,9 @@ app_server <- function( input, output, session ) {
     
     reactable::reactable(data_trans(),
                          showPageSizeOptions = T,
-                         resizable = T)
+                         pageSizeOptions = c(10, 25, 50, 100, 250, 500),
+                         resizable = T,
+                         defaultPageSize = 25)
   })
   
   #### choose columns ####
@@ -109,7 +107,10 @@ app_server <- function( input, output, session ) {
                    size = 4)
   })
   
-  ## whether to format x and y as factor
+  #### format x or y as factors ####
+  # for numeric columns, allow the user to optionally 
+  # format these columns as factors
+  
   output$formatfactorx <- renderUI({
     if (data_get() |> 
         dplyr::select(input$xvar) |> 
@@ -154,7 +155,7 @@ app_server <- function( input, output, session ) {
   ## ?dplyr_data_masking to see data masking
   ## example_dr |> dplyr::mutate("{a}" := factor(.data[[a]]))
   
-  data_trans <- reactive({
+    data_trans <- reactive({
     if (!exists("input$x_asfactor") | !exists("input$y_asfactor")) {
       data_get()
     } else if (input$x_asfactor & input$y_asfactor) {
@@ -193,6 +194,31 @@ app_server <- function( input, output, session ) {
     "time hms" = "hms",
     "time POSIX" = "time"
   )
+  
+  #### numeric variable transformation ####
+  # allow the user to set the scale transformation for 
+  # numeric x and y
+  
+  # TO BE IMPLEMENTED: check for variable type to determine which
+  # transformations will succeed
+  
+  x_scale_trans <- reactive({
+    if (data_trans() |> 
+        select(input$xvar) |> 
+        unlist() |> 
+        is.numeric()) {
+      scale_x_continuous(trans = input$xtrans)
+    }
+  })
+  
+  y_scale_trans <- reactive({
+    if (data_trans() |> 
+        select(input$yvar) |> 
+        unlist() |> 
+        is.numeric()) {
+      scale_y_continuous(trans = input$ytrans)
+    }
+  })
   
   output$transX <- renderUI({
     if (data_trans() |> 
