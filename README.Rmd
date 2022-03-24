@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 output: github_document
 ---
@@ -50,3 +51,57 @@ To run canPlotR, load the package and run it:
 library(canPlotR)
 canPlotR::run_app()
 ```
+=======
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# canPlotR
+
+<!-- badges: start -->
+
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+
+<!-- badges: end -->
+
+canPlotR is a browser-based tool to generate and export presentation- and publication-ready plots and figures. canPlotR aims to use an intuitive user interface to wrap `ggplot2` graphing functions to create professional and highly customizable figures required for most use cases.
+
+## Installation
+
+You can install the development version of canPlotR from Github so:
+
+```{r load message=FALSE, warning=FALSE}
+# If you don't have the `devtools` package installed, you can install it from CRAN with
+# install.packages("devtools")
+library(devtools)
+install_github("wayneliuq/canplotr")
+```
+
+## How to Use
+
+### Preparing the stacked input file
+
+Unlike most common applications for making plots (Excel, GraphPad), canPlotR is designed to use the much more versatile *stacked* tables to make plots.
+
+*To be updated*
+
+### Loading the app
+
+To run canPlotR, load the package and run it:
+
+```{r example, message=FALSE, warning=FALSE}
+library(canPlotR)
+canPlotR::run_app()
+```
+>>>>>>> 1db05752ed8026e8fbae06045feacaaa0b13b9f9
