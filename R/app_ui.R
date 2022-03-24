@@ -103,28 +103,39 @@ app_ui <- function(request) {
                   ## choose the type of geom
                   column(
                     width = 12,
-                    
-                    ## inputId$geompoint = geom_point
+                    ## input$geompoint = geom_point
                     shinyWidgets::switchInput(
                       inputId = "geompoint",
                       label = "points",
-                      value = F,
+                      value = T,
                       labelWidth = 300
                     ) |> prompter::add_prompt(
                       position = "top",
-                      message = "Display individual data points (geom_point)",
+                      message = "Display individual data points (geom_point), suitable for continuous x and y variables.",
                       size = "medium"
                     ),
                     
-                    ## inputId$geomsmooth_lm = geom_smooth(stat = "lm")
+                    ## input$geomline = geom_line
                     shinyWidgets::switchInput(
-                      inputId = "geomsmooth_lm",
-                      label = "linear regression",
+                      inputId = "geomline",
+                      label = "line",
                       value = F,
                       labelWidth = 300
                     ) |> prompter::add_prompt(
                       position = "top",
-                      message = "Display individual data points (geom_point)",
+                      message = "Connect data points with a line (geom_line), suitable for data witha continuous y variable.",
+                      size = "medium"
+                    ),
+                    
+                    ## input$geomboxplot = geom_boxplot
+                    shinyWidgets::switchInput(
+                      inputId = "geomboxplot",
+                      label = "box plot",
+                      value = F,
+                      labelWidth = 300
+                    ) |> prompter::add_prompt(
+                      position = "top",
+                      message = "Display a summary of the y variable using box plots (geom_boxplot), suitable for categorical x and continuous y variables.",
                       size = "medium"
                     )
                   )

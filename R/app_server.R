@@ -5,10 +5,6 @@
 #' @import shiny
 #' @noRd
 app_server <- function( input, output, session ) {
-  #### plot elements as reactive expressions ####
-  
- 
-  
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
   
@@ -18,8 +14,12 @@ app_server <- function( input, output, session ) {
       aes(x = get(input$xvar),
           y = get(input$yvar))
     ) +
-      geom_point() +
       
+      # custom geom
+      geomcust_boxplot() +
+      geomcust_line() +
+      geomcust_point() +
+
       # title
       labs(title = input$plotid) +
       
@@ -161,18 +161,18 @@ app_server <- function( input, output, session ) {
     } else if (input$x_asfactor & input$y_asfactor) {
       data_get() |> 
         mutate(
-          "{input$xvar}" := factor(.data[[input$xvar]]),
-          "{input$yvar}" := factor(.data[[input$yvar]])
+          "{input$xvar}" := factor(as.character(.data[[input$xvar]])),
+          "{input$yvar}" := factor(as.character(.data[[input$yvar]]))
         )
     } else if (input$x_asfactor) {
       data_get() |> 
         mutate(
-          "{input$xvar}" := factor(.data[[input$xvar]])
+          "{input$xvar}" := factor(as.character(.data[[input$xvar]]))
         )
     } else if (input$y_asfactor) {
       data_get() |> 
         mutate(
-          "{input$yvar}" := factor(.data[[input$yvar]])
+          "{input$yvar}" := factor(as.character(.data[[input$yvar]]))
         )
     } else {
       data_get()
@@ -264,9 +264,30 @@ app_server <- function( input, output, session ) {
     }
   })
 
+  #### customize type of plot ####
+
+  ## individual geom functions
+  geomcust_point <- reactive({
+    if (input$geompoint) {
+      geom_point()
+    }
+  })
+  
+  geomcust_line <- reactive({
+    if(input$geomline) {
+      geom_line()
+    }
+  })
+  
+  geomcust_boxplot <- reactive({
+    if(input$geomboxplot) {
+      geom_boxplot()
+    }
+  })
+  
   #### debug console ####
   output$debug <- renderText({
-    is.null(input$x_asfactor)
+    deparse(geom_cust())
   })
   
   #### session end scripts ####
