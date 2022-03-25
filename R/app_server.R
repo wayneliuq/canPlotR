@@ -5,13 +5,7 @@
 #' @import shiny
 #' @noRd
 app_server <- function( input, output, session ) {
-<<<<<<< HEAD
-  #### plot elements as reactive expressions ####
-  
- 
-  
-=======
->>>>>>> 1db05752ed8026e8fbae06045feacaaa0b13b9f9
+
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
   
@@ -20,17 +14,13 @@ app_server <- function( input, output, session ) {
       data = data_get(), 
       mapping = aes_cust()
     ) +
-<<<<<<< HEAD
       geom_point() +
-      
-=======
       
       # custom geom
       geomcust_boxplot() +
       geomcust_line() +
       geomcust_point() +
 
->>>>>>> 1db05752ed8026e8fbae06045feacaaa0b13b9f9
       # title
       labs(title = input$plotid) +
       
@@ -162,27 +152,13 @@ app_server <- function( input, output, session ) {
     }
   })
   
-<<<<<<< HEAD
   ## mutate data as factors
-  ## ?dplyr_data_masking to see data masking
-  ## example_dr |> dplyr::mutate("{a}" := factor(.data[[a]]))
-  
-    data_trans <- reactive({
-    if (!exists("input$x_asfactor") | !exists("input$y_asfactor")) {
-      data_get()
-    } else if (input$x_asfactor & input$y_asfactor) {
-      data_get() |> 
-        mutate(
-          "{input$xvar}" := factor(.data[[input$xvar]]),
-          "{input$yvar}" := factor(.data[[input$yvar]])
-        )
-=======
+
   ## conditionally set ggplot aes() mapping as factors
   # this has the advantage of easily incorporating the z variable for drawing heatmaps??
   aes_cust <- reactive({
     if (input$x_asfactor & input$y_asfactor) {
       aes(x = factor(get(input$xvar)), y = factor(get(input$yvar)))
->>>>>>> 1db05752ed8026e8fbae06045feacaaa0b13b9f9
     } else if (input$x_asfactor) {
       aes(x = factor(get(input$xvar)), y = get(input$yvar))
     } else if (input$y_asfactor) {
@@ -192,36 +168,7 @@ app_server <- function( input, output, session ) {
     }
   }) 
   
-  ## mutate data as factors
-  ## ?dplyr_data_masking to see data masking
-  ## example_dr |> dplyr::mutate("{a}" := factor(.data[[a]]))
-  
-  ## deprecate in favor of attempting to use ggplot mapping to factorize variables
-  #   data_trans <- reactive({
-  #   if (!exists("input$x_asfactor") | !exists("input$y_asfactor")) {
-  #     data_get()
-  #   } else if (input$x_asfactor & input$y_asfactor) {
-  #     data_get() |> 
-  #       mutate(
-  #         "{input$xvar}" := factor(as.character(.data[[input$xvar]])),
-  #         "{input$yvar}" := factor(as.character(.data[[input$yvar]]))
-  #       )
-  #   } else if (input$x_asfactor) {
-  #     data_get() |> 
-  #       mutate(
-  #         "{input$xvar}" := factor(as.character(.data[[input$xvar]]))
-  #       )
-  #   } else if (input$y_asfactor) {
-  #     data_get() |> 
-  #       mutate(
-  #         "{input$yvar}" := factor(as.character(.data[[input$yvar]]))
-  #       )
-  #   } else {
-  #     data_get()
-  #   }
-  # })
-  
-  ## transform or reorder x and y (numeric vs factor)
+    ## transform or reorder x and y (numeric vs factor)
   trans_continuous <- c(
     "none" = "identity",
     "reverse",
@@ -245,27 +192,19 @@ app_server <- function( input, output, session ) {
   # transformations will succeed
   
   x_scale_trans <- reactive({
-<<<<<<< HEAD
     if (data_trans() |> 
         select(input$xvar) |> 
         unlist() |> 
         is.numeric()) {
-=======
-    if (data_get() |> select(input$xvar) |> unlist() |> is.numeric() & isFALSE(input$x_asfactor)) {
->>>>>>> 1db05752ed8026e8fbae06045feacaaa0b13b9f9
       scale_x_continuous(trans = input$xtrans)
     }
   })
   
   y_scale_trans <- reactive({
-<<<<<<< HEAD
     if (data_trans() |> 
         select(input$yvar) |> 
         unlist() |> 
         is.numeric()) {
-=======
-    if (data_get() |> select(input$yvar) |> unlist() |> is.numeric() & isFALSE(input$y_asfactor)) {
->>>>>>> 1db05752ed8026e8fbae06045feacaaa0b13b9f9
       scale_y_continuous(trans = input$ytrans)
     }
   })

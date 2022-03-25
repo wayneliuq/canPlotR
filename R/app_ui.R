@@ -103,161 +103,153 @@ app_ui <- function(request) {
                   ## choose the type of geom
                   column(
                     width = 12,
-<<<<<<< HEAD
                     
                     ## inputId$geompoint = geom_point
                     shinyWidgets::switchInput(
                       inputId = "geompoint",
                       label = "points",
-=======
-                    ## input$geompoint = geom_point
-                    shinyWidgets::switchInput(
-                      inputId = "geompoint",
-                      label = "points",
-                      value = T,
-                      labelWidth = 300
-                    ) |> prompter::add_prompt(
-                      position = "top",
-                      message = "Display individual data points (geom_point), suitable for continuous x and y variables.",
-                      size = "medium"
-                    ),
-                    
-                    ## input$geomline = geom_line
-                    shinyWidgets::switchInput(
-                      inputId = "geomline",
-                      label = "line",
->>>>>>> 1db05752ed8026e8fbae06045feacaaa0b13b9f9
-                      value = F,
-                      labelWidth = 300
-                    ) |> prompter::add_prompt(
-                      position = "top",
-<<<<<<< HEAD
-                      message = "Display individual data points (geom_point)",
-                      size = "medium"
-                    ),
-                    
-                    ## inputId$geomsmooth_lm = geom_smooth(stat = "lm")
-                    shinyWidgets::switchInput(
-                      inputId = "geomsmooth_lm",
-                      label = "linear regression",
-=======
-                      message = "Connect data points with a line (geom_line), suitable for data witha continuous y variable.",
-                      size = "medium"
-                    ),
-                    
-                    ## input$geomboxplot = geom_boxplot
-                    shinyWidgets::switchInput(
-                      inputId = "geomboxplot",
-                      label = "box plot",
->>>>>>> 1db05752ed8026e8fbae06045feacaaa0b13b9f9
-                      value = F,
-                      labelWidth = 300
-                    ) |> prompter::add_prompt(
-                      position = "top",
-<<<<<<< HEAD
-                      message = "Display individual data points (geom_point)",
-=======
-                      message = "Display a summary of the y variable using box plots (geom_boxplot), suitable for categorical x and continuous y variables.",
->>>>>>> 1db05752ed8026e8fbae06045feacaaa0b13b9f9
-                      size = "medium"
+                      ## input$geompoint = geom_point
+                      shinyWidgets::switchInput(
+                        inputId = "geompoint",
+                        label = "points",
+                        value = T,
+                        labelWidth = 300
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display individual data points (geom_point), suitable for continuous x and y variables.",
+                        size = "medium"
+                      ),
+                      
+                      ## input$geomline = geom_line
+                      shinyWidgets::switchInput(
+                        inputId = "geomline",
+                        label = "line",
+                        value = F,
+                        labelWidth = 300
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display individual data points (geom_point)",
+                        size = "medium"
+                      ),
+                      
+                      ## inputId$geomsmooth_lm = geom_smooth(stat = "lm")
+                      shinyWidgets::switchInput(
+                        inputId = "geomsmooth_lm",
+                        label = "linear regression",
+                        message = "Connect data points with a line (geom_line), suitable for data witha continuous y variable.",
+                        size = "medium"
+                      ),
+                      
+                      ## input$geomboxplot = geom_boxplot
+                      shinyWidgets::switchInput(
+                        inputId = "geomboxplot",
+                        label = "box plot",
+                        value = F,
+                        labelWidth = 300
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display individual data points (geom_point)",
+                        message = "Display a summary of the y variable using box plots (geom_boxplot), suitable for categorical x and continuous y variables.",
+                        size = "medium"
+                      )
                     )
                   )
+                )
+              )
+            )
+          ),
+          
+          #### main plot output ####
+          
+          column(
+            width = 6,
+            fluidRow(
+              actionButton(
+                inputId = "makeplot",
+                label = "Update Plot",
+                icon = icon("chart-bar"),
+                class = "btn-primary"
+              )
+            ),
+            fluidRow(
+              plotOutput("plot")
+            )
+          )
+          
+        ),
+        
+        fluidRow(
+          
+          #### plot appearance ####
+          
+          column(
+            width = 6,
+            wellPanel(
+              tags$h5("Plot Appearance"),
+              tabsetPanel(
+                tabPanel(
+                  title = "appearance 1",
+                  "appearance 1"
+                ),
+                tabPanel(
+                  title = "apperance 2",
+                  "appearance 2"
+                )
+              )
+            )
+          ),
+          
+          #### statistics ####
+          column(
+            width = 6,
+            wellPanel(
+              tags$h5("Statistics"),
+              tabsetPanel(
+                tabPanel(
+                  title = "statistics 1",
+                  "statistics 1"
+                ),
+                tabPanel(
+                  title = "statistics 2",
+                  "statistics 2"
                 )
               )
             )
           )
         ),
         
-        #### main plot output ####
-        
-        column(
-          width = 6,
-          fluidRow(
-            actionButton(
-              inputId = "makeplot",
-              label = "Update Plot",
-              icon = icon("chart-bar"),
-              class = "btn-primary"
-            )
+        fluidRow(
+          #### data preview ####
+          column(
+            width = 6,
+            reactable::reactableOutput("datatable")
           ),
-          fluidRow(
-            plotOutput("plot")
-          )
-        )
-        
-      ),
-      
-      fluidRow(
-        
-        #### plot appearance ####
-        
-        column(
-          width = 6,
-          wellPanel(
-            tags$h5("Plot Appearance"),
-            tabsetPanel(
-              tabPanel(
-                title = "appearance 1",
-                "appearance 1"
-              ),
-              tabPanel(
-                title = "apperance 2",
-                "appearance 2"
-              )
-            )
-          )
-        ),
-        
-        #### statistics ####
-        column(
-          width = 6,
-          wellPanel(
-            tags$h5("Statistics"),
-            tabsetPanel(
-              tabPanel(
-                title = "statistics 1",
-                "statistics 1"
-              ),
-              tabPanel(
-                title = "statistics 2",
-                "statistics 2"
+          
+          #### tutorial/about ####
+          column(
+            width = 6,
+            wellPanel(
+              tabsetPanel(
+                tabPanel(
+                  title = "How to use",
+                  "tutorial"
+                ),
+                tabPanel(
+                  title = "About",
+                  "about"
+                ),
+                tabPanel(
+                  title = "debug",
+                  textOutput("debug")
+                )
               )
             )
           )
         )
-      ),
-      
-      fluidRow(
-        #### data preview ####
-        column(
-          width = 6,
-          reactable::reactableOutput("datatable")
-        ),
         
-        #### tutorial/about ####
-        column(
-          width = 6,
-          wellPanel(
-            tabsetPanel(
-              tabPanel(
-                title = "How to use",
-                "tutorial"
-              ),
-              tabPanel(
-                title = "About",
-                "about"
-              ),
-              tabPanel(
-                title = "debug",
-                textOutput("debug")
-              )
-            )
-          )
-        )
       )
-      
     )
-  )
+  
 }
 
 #' Add external Resources to the Application
