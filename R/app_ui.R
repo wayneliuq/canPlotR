@@ -124,14 +124,6 @@ app_ui <- function(request) {
                       labelWidth = 300
                     ) |> prompter::add_prompt(
                       position = "top",
-                      message = "Display individual data points (geom_point)",
-                      size = "medium"
-                    ),
-                    
-                    ## inputId$geomsmooth_lm = geom_smooth(stat = "lm")
-                    shinyWidgets::switchInput(
-                      inputId = "geomsmooth_lm",
-                      label = "linear regression",
                       message = "Connect data points with a line (geom_line), suitable for data witha continuous y variable.",
                       size = "medium"
                     ),
@@ -144,7 +136,6 @@ app_ui <- function(request) {
                       labelWidth = 300
                     ) |> prompter::add_prompt(
                       position = "top",
-                      message = "Display individual data points (geom_point)",
                       message = "Display a summary of the y variable using box plots (geom_boxplot), suitable for categorical x and continuous y variables.",
                       size = "medium"
                     )

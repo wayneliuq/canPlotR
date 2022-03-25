@@ -14,8 +14,7 @@ app_server <- function( input, output, session ) {
       data = data_get(), 
       mapping = aes_cust()
     ) +
-      geom_point() +
-      
+
       # custom geom
       geomcust_boxplot() +
       geomcust_line() +
@@ -192,19 +191,13 @@ app_server <- function( input, output, session ) {
   # transformations will succeed
   
   x_scale_trans <- reactive({
-    if (data_trans() |> 
-        select(input$xvar) |> 
-        unlist() |> 
-        is.numeric()) {
+    if (data_get() |> select(input$xvar) |> unlist() |> is.numeric() & isFALSE(input$x_asfactor)) {
       scale_x_continuous(trans = input$xtrans)
     }
   })
   
   y_scale_trans <- reactive({
-    if (data_trans() |> 
-        select(input$yvar) |> 
-        unlist() |> 
-        is.numeric()) {
+    if (data_get() |> select(input$yvar) |> unlist() |> is.numeric() & isFALSE(input$y_asfactor)) {
       scale_y_continuous(trans = input$ytrans)
     }
   })
