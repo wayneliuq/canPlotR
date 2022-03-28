@@ -112,10 +112,7 @@ app_server <- function( input, output, session ) {
   # format these columns as factors
   
   output$formatfactorx <- renderUI({
-    if (data_get() |> 
-        dplyr::select(input$xvar) |> 
-        unlist() |> 
-        is.numeric()) {
+    if (data_get() |> dplyr::select(input$xvar) |> unlist() |> is.numeric()) {
       
       prompter::add_prompt(
         checkboxInput(
@@ -132,10 +129,7 @@ app_server <- function( input, output, session ) {
   })
   
   output$formatfactory <- renderUI({
-    if (data_get() |> 
-        dplyr::select(input$yvar) |> 
-        unlist() |> 
-        is.numeric()) {
+    if (data_get() |> dplyr::select(input$yvar) |> unlist() |> is.numeric()) {
       
       prompter::add_prompt(
         checkboxInput(
@@ -151,10 +145,20 @@ app_server <- function( input, output, session ) {
     }
   })
   
-  ## mutate data as factors
-
+  ## get factor levels so they can be re-ordered
+  x_factorlevels_default <- reactive({
+    data_get() |> select(input$xvar) |> factor() |> levels()
+  })
+  
+  y_factorlevels_default <- reactive({
+    data_get() |> select(input$yvar) |> factor() |> levels()
+  })
+  
+  ## function for ggplot mapping as factors
+  
   ## conditionally set ggplot aes() mapping as factors
   # this has the advantage of easily incorporating the z variable for drawing heatmaps??
+  
   aes_cust <- reactive({
     if (input$x_asfactor & input$y_asfactor) {
       aes(x = factor(get(input$xvar)), y = factor(get(input$yvar)))
@@ -203,18 +207,12 @@ app_server <- function( input, output, session ) {
   })
   
   output$transX <- renderUI({
-    if (data_get() |> 
-        select(input$xvar) |> 
-        unlist() |> 
-        is.numeric()) {
+    if (data_get() |> select(input$xvar) |> unlist() |> is.numeric() & isFALSE(input$x_asfactor)) {
       selectInput(inputId = "xtrans",
                   label = "x-axis transformation",
                   choices = trans_continuous,
                   selected = 1)
-    } else if (data_get() |> 
-               select(input$xvar) |> 
-               unlist() |> 
-               is.factor()) {
+    } else {
       sortable::rank_list(
         text = "Category order",
         labels = "test",
@@ -225,18 +223,12 @@ app_server <- function( input, output, session ) {
   })
   
   output$transY <- renderUI({
-    if (data_get() |> 
-        select(input$yvar) |> 
-        unlist() |> 
-        is.numeric()) {
+    if (data_get() |> select(input$yvar) |> unlist() |> is.numeric() & isFALSE(input$y_asfactor)) {
       selectInput(inputId = "ytrans",
                   label = "y-axis transformation",
                   choices = trans_continuous,
                   selected = 1)
-    } else if (data_get() |> 
-               select(input$yvar) |> 
-               unlist() |> 
-               is.factor()) {
+    } else {
       sortable::rank_list(
         text = "y-axis order",
         labels = "test",
@@ -269,7 +261,7 @@ app_server <- function( input, output, session ) {
   
   #### debug console ####
   output$debug <- renderText({
-    deparse(geom_cust())
+    deparse(c(input$xorder, "_", input$yorder))
   })
   
   #### session end scripts ####
