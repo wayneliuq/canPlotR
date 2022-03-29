@@ -79,17 +79,75 @@ app_ui <- function(request) {
                   )
                 ),
                 
-                ## whether to convert to factor
+                #### asfactor and transformations ####
                 fluidRow(
                   column(
                     width = 6,
-                    uiOutput("formatfactorx"),
-                    uiOutput("transX")
+                    
+                    ## format x as factor
+                    checkboxInput(
+                      inputId = "x_asfactor",
+                      label = "Format as categorical",
+                      value = F
+                    ) |> prompter::add_prompt(
+                      position = "right",
+                      size = "large",
+                      message = "If the column you selected as the x variable 
+                      conists of only numbers, it will be assumed to be a 
+                      continuous variable. Select this box if you want to format 
+                      the x-variable as a categorical variable (factor). If the 
+                      variable is already detected as categorical, nothing will 
+                      happen."
+                    ),
+                    
+                    ## select transformation for numeric x variable
+                    shinyWidgets::pickerInput(
+                      inputId = "xtrans",
+                      label = "x-axis transformation",
+                      choices = trans_continuous,
+                      selected = 1
+                    ),
+                    
+                    ## reorder categorical x, hide in dropdown since sometimes it's huge
+                    shinyWidgets::dropdown(
+                      status = "primary",
+                      label = "re-order x-variable",
+                      uiOutput("orderX")
+                    )
                   ),
                   column(
                     width = 6,
-                    uiOutput("formatfactory"),
-                    uiOutput("transY")
+                    
+                    ## format y as factor
+                    checkboxInput(
+                      inputId = "y_asfactor",
+                      label = "Format as categorical",
+                      value = F
+                    ) |> prompter::add_prompt(
+                      position = "right",
+                      size = "large",
+                      message = "If the column you selected as the y variable 
+                      conists of only numbers, it will be assumed to be a 
+                      continuous variable. Select this box if you want to format 
+                      the x-variable as a categorical variable (factor). If the 
+                      variable is already detected as categorical, nothing will 
+                      happen."
+                    ),
+                    
+                    ## select transformation for numeric y variable
+                    shinyWidgets::pickerInput(
+                      inputId = "ytrans",
+                      label = "y-axis transformation",
+                      choices = trans_continuous,
+                      selected = 1
+                    ),
+                    
+                    ## reorder categorical x, hide in dropdown since sometimes it's huge
+                    shinyWidgets::dropdown(
+                      status = "primary",
+                      label = "re-order y-variable",
+                      uiOutput("orderY")
+                    )
                   )
                 )
               ),
@@ -150,14 +208,17 @@ app_ui <- function(request) {
         
         column(
           width = 6,
-          fluidRow(
-            actionButton(
-              inputId = "makeplot",
-              label = "Update Plot",
-              icon = icon("chart-bar"),
-              class = "btn-primary"
-            )
-          ),
+          
+          ## remove update plot button dependency until testing with large datasets
+          # fluidRow(
+          #   actionButton(
+          #     inputId = "makeplot",
+          #     label = "Update Plot",
+          #     icon = icon("chart-bar"),
+          #     class = "btn-primary"
+          #   )
+          # ),
+          
           fluidRow(
             plotOutput("plot")
           )
@@ -264,3 +325,19 @@ golem_add_external_resources <- function(){
   )
 }
 
+#### common functions and variables ####
+## transform or reorder x and y (numeric vs factor)
+trans_continuous <- c(
+  "none" = "identity",
+  "reverse",
+  "log10",
+  "log2",
+  "natural log" = "log",
+  "sqrt",
+  "exp",
+  "logit",
+  "probit",
+  "date",
+  "time hms" = "hms",
+  "time POSIX" = "time"
+)

@@ -6,14 +6,33 @@
 #' @noRd
 app_server <- function( input, output, session ) {
   #### common functions ####
+  
+  ## check whether variables are numeric
+  ##need fixes here
   xvar_isnumeric <- reactive({
-    data_get() |> select(input$xvar) |> unlist() |> is.numeric()
+    if (!exists("input$xvar")) {
+      F
+    } else {
+      data_get() |> select(input$xvar) |> unlist() |> is.numeric()
+    }
   })
   
   yvar_isnumeric <- reactive({
-    data_get() |> select(input$yvar) |> unlist() |> is.numeric()
+    if (!exists("input$yvar")) {
+      F
+    } else {
+      data_get() |> select(input$yvar) |> unlist() |> is.numeric()
+    }
   })
   
+  ## get the factor levels of variables
+  x_factorlevels_default <- reactive({
+    data_get() |> select(input$xvar) |> unlist() |> factor() |> levels()
+  })
+  
+  y_factorlevels_default <- reactive({
+    data_get() |> select(input$yvar) |> unlist() |> factor() |> levels()
+  })
   
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
@@ -44,9 +63,10 @@ app_server <- function( input, output, session ) {
       
       #theme, to be customized
       theme_bw()
-  ) |> 
-    # plot only updates when button is pressed
-    bindEvent(input$makeplot)
+  ) #|> 
+  # plot only updates when button is pressed
+  # remove dependency until large data testing
+  # bindEvent(input$makeplot)
 
   #### load data ####
   ## file import
@@ -84,6 +104,8 @@ app_server <- function( input, output, session ) {
       
     } else if (input$input_data_type == 2) {
       data("example_dr", envir = environment()); example_dr
+    } else {
+      tibble(A = c(1,2,3), B = c(5,6,7))
     }
   })
   
@@ -117,52 +139,7 @@ app_server <- function( input, output, session ) {
   })
   
   #### format x or y as factors ####
-  # for numeric columns, allow the user to optionally 
-  # format these columns as factors
-  
-  output$formatfactorx <- renderUI({
-    if (data_get() |> dplyr::select(input$xvar) |> unlist() |> is.numeric()) {
-      
-      prompter::add_prompt(
-        checkboxInput(
-          inputId = "x_asfactor",
-          label = "Format as factor",
-          value = FALSE
-        ),
-        position = "right",
-        size = "large",
-        message = "The x variable was detected as a continuous (numeric) variable. Check this box to format it as a categorical variable (a.k.a factor)"
-      )
-
-    }
-  })
-  
-  output$formatfactory <- renderUI({
-    if (data_get() |> dplyr::select(input$yvar) |> unlist() |> is.numeric()) {
-      
-      prompter::add_prompt(
-        checkboxInput(
-          inputId = "y_asfactor",
-          label = "Format as factor",
-          value = FALSE
-        ),
-        position = "right",
-        size = "large",
-        message = "The y variable was detected as a continuous (numeric) variable. Check this box to format it as a categorical variable (a.k.a factor)"
-      )
-      
-    }
-  })
-  
-  ## get factor levels so they can be re-ordered
-  x_factorlevels_default <- reactive({
-    data_get() |> select(input$xvar) |> unlist() |> factor() |> levels()
-  })
-  
-  y_factorlevels_default <- reactive({
-    data_get() |> select(input$yvar) |> unlist() |> factor() |> levels()
-  })
-  
+ 
   ## function for ggplot mapping as factors
   
   ## conditionally set ggplot aes() mapping as factors
@@ -180,7 +157,15 @@ app_server <- function( input, output, session ) {
     }
   }) 
   
-    ## transform or reorder x and y (numeric vs factor)
+
+  #### numeric variable transformation ####
+  # allow the user to set the scale transformation for 
+  # numeric x and y
+  
+  # TO BE IMPLEMENTED: check for variable type to determine which
+  # transformations will succeed
+  
+  # this is copied from app_ui, maybe need to find a way to pull list directly from app_ui.R
   trans_continuous <- c(
     "none" = "identity",
     "reverse",
@@ -196,13 +181,6 @@ app_server <- function( input, output, session ) {
     "time POSIX" = "time"
   )
   
-  #### numeric variable transformation ####
-  # allow the user to set the scale transformation for 
-  # numeric x and y
-  
-  # TO BE IMPLEMENTED: check for variable type to determine which
-  # transformations will succeed
-  
   x_scale_trans <- reactive({
     if (xvar_isnumeric() & isFALSE(input$x_asfactor)) {
       scale_x_continuous(trans = input$xtrans)
@@ -215,36 +193,76 @@ app_server <- function( input, output, session ) {
     }
   })
   
-  output$transX <- renderUI({
-    if (xvar_isnumeric() & isFALSE(input$x_asfactor)) {
-      selectInput(inputId = "xtrans",
-                  label = "x-axis transformation",
-                  choices = trans_continuous,
-                  selected = 1)
-    } else {
+  ## if variable is factor, do not allow selection of transformation
+  ## or user will be confused
+  # observe(!xvar_isnumeric() | input$x_asfactor) |>
+  #   bindEvent({
+  #     disabled_choices <- trans_continuous == "identity"
+  #     shinyWidgets::updatePickerInput(
+  #       session = session,
+  #       inputId = "xtrans",
+  #       choices = "none",
+  #       choicesOpt = list(
+  #         disabled = disabled_choices,
+  #         style = ifelse(disabled_choices,
+  #                        yes = "color: rgba(119, 119, 119, 0.5);",
+  #                        no = "")
+  #       )
+  #     )
+  #   })
+  # 
+  
+  observeEvent((!xvar_isnumeric() | input$x_asfactor), {
+    disabled_choices <- trans_continuous != "identity"
+    shinyWidgets::updatePickerInput(
+      session = session,
+      inputId = "xtrans",
+      choices = trans_continuous,
+      choicesOpt = list(
+        disabled = disabled_choices,
+        style = ifelse(disabled_choices,
+                       yes = "color: rgba(119, 119, 119, 0.5);",
+                       no = "")
+      )
+    )
+  }, ignoreInit = T)
+  # 
+  # observeEvent((!yvar_isnumeric() | input$y_asfactor), {
+  #   disabled_choices <- "none"
+  #   shinyWidgets::updatePickerInput(
+  #     session = session,
+  #     inputId = "ytrans",
+  #     choices = "none",
+  #     choicesOpt = list(
+  #       disabled = disabled_choices,
+  #       style = ifelse(disabled_choices,
+  #                      yes = "color: rgba(119, 119, 119, 0.5);",
+  #                      no = "")
+  #     )
+  #   )
+  # }, ignoreInit = T)
+  
+  #### reorder x and y variable ui ####
+  output$orderX <- renderUI({
+    if (!xvar_isnumeric | input$x_asfactor) {
       sortable::rank_list(
         text = "Category order",
         labels = x_factorlevels_default(),
         input_id = "xorder",
         options = sortable::sortable_options(multiDrag = T)
       )
-    }
+    } else {"Not application for continuous x variable"}
   })
   
-  output$transY <- renderUI({
-    if (yvar_isnumeric() & isFALSE(input$y_asfactor)) {
-      selectInput(inputId = "ytrans",
-                  label = "y-axis transformation",
-                  choices = trans_continuous,
-                  selected = 1)
-    } else {
+  output$orderY <- renderUI({
+    if (!yvar_isnumeric | input$y_asfactor) {
       sortable::rank_list(
-        text = "y-axis order",
+        text = "Category order",
         labels = y_factorlevels_default(),
         input_id = "yorder",
         options = sortable::sortable_options(multiDrag = T)
       )
-    }
+    } else {"Not applicable for continuous y variable"}
   })
 
   #### customize type of plot ####
@@ -270,17 +288,18 @@ app_server <- function( input, output, session ) {
   
   #### debug console ####
   output$debug <- renderText({
-
+    input$xvar
+    exists("input$xvar")
   })
   
   #### session end scripts ####
   # session$onSessionEnded(function() {
-  #   
+  # 
   #   ## remove uploaded data
   #   if (!is.null(input$data_user)) {
   #     file.remove(input$data_user$datapath)
   #   }
-  #   
+  # 
   #   ## remove temporary files
   #   if (dir.exists(tempdir())) {
   #     unlink(tempdir(), recursive = T)

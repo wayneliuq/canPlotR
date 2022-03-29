@@ -100,7 +100,7 @@ Unlike most common applications for making plots (Excel, GraphPad), canPlotR is 
 
 To run canPlotR, load the package and run it:
 
-```{r example, message=FALSE, warning=FALSE}
+```{r example, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 library(canPlotR)
 canPlotR::run_app()
 ```
