@@ -5,7 +5,16 @@
 #' @import shiny
 #' @noRd
 app_server <- function( input, output, session ) {
-
+  #### common functions ####
+  xvar_isnumeric <- reactive({
+    data_get() |> select(input$xvar) |> unlist() |> is.numeric()
+  })
+  
+  yvar_isnumeric <- reactive({
+    data_get() |> select(input$yvar) |> unlist() |> is.numeric()
+  })
+  
+  
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
   
@@ -147,11 +156,11 @@ app_server <- function( input, output, session ) {
   
   ## get factor levels so they can be re-ordered
   x_factorlevels_default <- reactive({
-    data_get() |> select(input$xvar) |> factor() |> levels()
+    data_get() |> select(input$xvar) |> unlist() |> factor() |> levels()
   })
   
   y_factorlevels_default <- reactive({
-    data_get() |> select(input$yvar) |> factor() |> levels()
+    data_get() |> select(input$yvar) |> unlist() |> factor() |> levels()
   })
   
   ## function for ggplot mapping as factors
@@ -160,12 +169,12 @@ app_server <- function( input, output, session ) {
   # this has the advantage of easily incorporating the z variable for drawing heatmaps??
   
   aes_cust <- reactive({
-    if (input$x_asfactor & input$y_asfactor) {
-      aes(x = factor(get(input$xvar)), y = factor(get(input$yvar)))
-    } else if (input$x_asfactor) {
-      aes(x = factor(get(input$xvar)), y = get(input$yvar))
-    } else if (input$y_asfactor) {
-      aes(x = get(input$xvar), y = factor(get(input$yvar)))
+    if ((input$x_asfactor & input$y_asfactor) | (!xvar_isnumeric() & !yvar_isnumeric())) {
+      aes(x = factor(get(input$xvar), levels = input$xorder), y = factor(get(input$yvar), levels = input$yorder))
+    } else if ((input$x_asfactor | !xvar_isnumeric()) & yvar_isnumeric() & !input$y_asfactor) {
+      aes(x = factor(get(input$xvar), levels = input$xorder), y = get(input$yvar))
+    } else if ((input$y_asfactor | !yvar_isnumeric()) & !input$x_asfactor & xvar_isnumeric()) {
+      aes(x = get(input$xvar), y = factor(get(input$yvar), levels = input$yorder))
     } else {
       aes(x = get(input$xvar), y = get(input$yvar))
     }
@@ -195,19 +204,19 @@ app_server <- function( input, output, session ) {
   # transformations will succeed
   
   x_scale_trans <- reactive({
-    if (data_get() |> select(input$xvar) |> unlist() |> is.numeric() & isFALSE(input$x_asfactor)) {
+    if (xvar_isnumeric() & isFALSE(input$x_asfactor)) {
       scale_x_continuous(trans = input$xtrans)
     }
   })
   
   y_scale_trans <- reactive({
-    if (data_get() |> select(input$yvar) |> unlist() |> is.numeric() & isFALSE(input$y_asfactor)) {
+    if (yvar_isnumeric() & isFALSE(input$y_asfactor)) {
       scale_y_continuous(trans = input$ytrans)
     }
   })
   
   output$transX <- renderUI({
-    if (data_get() |> select(input$xvar) |> unlist() |> is.numeric() & isFALSE(input$x_asfactor)) {
+    if (xvar_isnumeric() & isFALSE(input$x_asfactor)) {
       selectInput(inputId = "xtrans",
                   label = "x-axis transformation",
                   choices = trans_continuous,
@@ -215,7 +224,7 @@ app_server <- function( input, output, session ) {
     } else {
       sortable::rank_list(
         text = "Category order",
-        labels = "test",
+        labels = x_factorlevels_default(),
         input_id = "xorder",
         options = sortable::sortable_options(multiDrag = T)
       )
@@ -223,7 +232,7 @@ app_server <- function( input, output, session ) {
   })
   
   output$transY <- renderUI({
-    if (data_get() |> select(input$yvar) |> unlist() |> is.numeric() & isFALSE(input$y_asfactor)) {
+    if (yvar_isnumeric() & isFALSE(input$y_asfactor)) {
       selectInput(inputId = "ytrans",
                   label = "y-axis transformation",
                   choices = trans_continuous,
@@ -231,7 +240,7 @@ app_server <- function( input, output, session ) {
     } else {
       sortable::rank_list(
         text = "y-axis order",
-        labels = "test",
+        labels = y_factorlevels_default(),
         input_id = "yorder",
         options = sortable::sortable_options(multiDrag = T)
       )
@@ -261,7 +270,7 @@ app_server <- function( input, output, session ) {
   
   #### debug console ####
   output$debug <- renderText({
-    deparse(c(input$xorder, "_", input$yorder))
+
   })
   
   #### session end scripts ####
