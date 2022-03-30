@@ -11,12 +11,12 @@ app_server <- function( input, output, session ) {
   ##need fixes here
   xvar_isnumeric <- reactive({
     tryCatch({data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> is.numeric()},
-             error = function(x) {F})
+             error = function(e) {F})
   })
   
   yvar_isnumeric <- reactive({
     tryCatch({data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> is.numeric()},
-             error = function(x) {F})
+             error = function(e) {F})
   })
   
   ## get the factor levels of variables
@@ -91,7 +91,7 @@ app_server <- function( input, output, session ) {
   data_get <- reactive({
     ## later fix so no data won't generate error in reactable output
     ## user uploaded data
-    if (input$input_data_type == 1) {
+    (if (input$input_data_type == 1) {
       
       ## find the file type of the user uploaded data
       if (tools::file_ext(input$data_user$datapath) == "xls") {
@@ -105,8 +105,10 @@ app_server <- function( input, output, session ) {
     } else if (input$input_data_type == 2) {
       data("example_dr", envir = environment()); example_dr
     } else {
-      tibble(A = c(1,2,3), B = c(5,6,7))
-    }
+      tibble(A = 0, B = 0)
+    }) |> tryCatch(
+      error = function(e) {tibble(A = 0, B = 0)}
+    )
   })
   
   #### show data table preview ####
@@ -141,7 +143,25 @@ app_server <- function( input, output, session ) {
  
   ## function for ggplot mapping as factors
   
-  ## conditionally set ggplot aes() mapping as factors
+  ## catch error if xorder and yorder is not initialized
+  xorder_catch <- reactive({
+    (if (identical(length(input$xorder), length(x_factorlevels_default()))) {
+      input$xorder
+    } else {
+      x_factorlevels_default()
+    }) |> tryCatch(error = function(e) x_factorlevels_default())
+  })
+  
+  yorder_catch <- reactive({
+    (if (identical(length(input$yorder), length(y_factorlevels_default()))) {
+      input$yorder
+    } else {
+      y_factorlevels_default()
+    }) |> tryCatch(error = function(e) y_factorlevels_default())
+  })
+  
+  
+  ## format x and y variables as ggplot mapping objects
   ## separate input$xvar and input$yvar for later greater modularity (e.g. adding mappings)
   # If your wrapper has a more specific interface with named arguments,
   # you need "enquote and unquote":
@@ -151,56 +171,26 @@ app_server <- function( input, output, session ) {
   #   
   #   ggplot(data) + geom_point(aes(!!x, !!y))
   
-  # aes_cust <- reactive({
-  #   if ((input$x_asfactor & input$y_asfactor) | (!xvar_isnumeric() & !yvar_isnumeric())) {
-  #     aes(x = factor(get(input$xvar), levels = input$xorder), y = factor(get(input$yvar), levels = input$yorder))
-  #   } else if ((input$x_asfactor | !xvar_isnumeric()) & yvar_isnumeric() & !input$y_asfactor) {
-  #     aes(x = factor(get(input$xvar), levels = input$xorder), y = get(input$yvar))
-  #   } else if ((input$y_asfactor | !yvar_isnumeric()) & !input$x_asfactor & xvar_isnumeric()) {
-  #     aes(x = get(input$xvar), y = factor(get(input$yvar), levels = input$yorder))
-  #   } else {
-  #     aes(x = get(input$xvar), y = get(input$yvar))
-  #   }
-  # }) 
-  
-  ## catch error if xorder and yorder is not initialized
-  xorder_catch <- reactive({
-    (if (identical(length(input$xorder), length(x_factorlevels_default()))) {
-      input$xorder
-    } else {
-      x_factorlevels_default()
-    }) |> tryCatch(error = function(x) x_factorlevels_default())
-  })
-  
-  yorder_catch <- reactive({
-    (if (identical(length(input$yorder), length(y_factorlevels_default()))) {
-      input$yorder
-    } else {
-      y_factorlevels_default()
-    }) |> tryCatch(error = function(y) y_factorlevels_default())
-  })
-  
-  ## format x and y variables as ggplot mapping objects
   xvar_plot <- reactive({
-    if (input$x_asfactor | !xvar_isnumeric()) {
+    (if (input$x_asfactor | !xvar_isnumeric()) {
       factor(
         get(input$xvar),
         levels = xorder_catch()
       ) |> expr()
     } else {
       get(input$xvar) |> expr()
-    }
+    }) |> tryCatch(error = function(e) 0)
   })
   
   yvar_plot <- reactive({
-    if (input$y_asfactor | !yvar_isnumeric()) {
+    (if (input$y_asfactor | !yvar_isnumeric()) {
       factor(
         get(input$yvar),
         levels = yorder_catch()
       ) |> expr()
     } else {
       get(input$yvar) |> expr()
-    }
+    }) |> tryCatch(error = function(e) 0)
   })
   
   #### numeric variable transformation ####
