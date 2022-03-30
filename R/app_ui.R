@@ -109,11 +109,7 @@ app_ui <- function(request) {
                     ),
                     
                     ## reorder categorical x, hide in dropdown since sometimes it's huge
-                    shinyWidgets::dropdown(
-                      status = "primary",
-                      label = "re-order x-variable",
-                      uiOutput("orderX")
-                    )
+                    uiOutput("orderX")
                   ),
                   column(
                     width = 6,
@@ -143,11 +139,7 @@ app_ui <- function(request) {
                     ),
                     
                     ## reorder categorical x, hide in dropdown since sometimes it's huge
-                    shinyWidgets::dropdown(
-                      status = "primary",
-                      label = "re-order y-variable",
-                      uiOutput("orderY")
-                    )
+                    uiOutput("orderY")
                   )
                 )
               ),
@@ -268,6 +260,8 @@ app_ui <- function(request) {
       
       fluidRow(
         #### data preview ####
+        ## later move the data table to a better location
+        
         column(
           width = 6,
           reactable::reactableOutput("datatable")

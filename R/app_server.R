@@ -10,59 +10,59 @@ app_server <- function( input, output, session ) {
   ## check whether variables are numeric
   ##need fixes here
   xvar_isnumeric <- reactive({
-    if (!exists("input$xvar")) {
-      F
-    } else {
-      data_get() |> select(input$xvar) |> unlist() |> is.numeric()
-    }
+    tryCatch({data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> is.numeric()},
+             error = function(x) {F})
   })
   
   yvar_isnumeric <- reactive({
-    if (!exists("input$yvar")) {
-      F
-    } else {
-      data_get() |> select(input$yvar) |> unlist() |> is.numeric()
-    }
+    tryCatch({data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> is.numeric()},
+             error = function(x) {F})
   })
   
   ## get the factor levels of variables
   x_factorlevels_default <- reactive({
-    data_get() |> select(input$xvar) |> unlist() |> factor() |> levels()
+    data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> factor() |> levels()
   })
   
   y_factorlevels_default <- reactive({
-    data_get() |> select(input$yvar) |> unlist() |> factor() |> levels()
+    data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> factor() |> levels()
   })
   
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
+  # see ?rlang::englue
+  
+  final_ggplot <- reactive({
+    ggplot(
+    data = data_get(), 
+    mapping = aes(x = !!xvar_plot(),
+                  y = !!yvar_plot())
+  ) +
+    
+    # custom geom
+    geomcust_boxplot() +
+    geomcust_line() +
+    geomcust_point() +
+    
+    # title
+    labs(title = input$plotid) +
+    
+    #x-axis label
+    xlab(input$xvar) +
+    
+    #y-axis label
+    ylab(input$yvar) +
+    
+    # transform the x and y axis depending on user input
+    x_scale_trans() +
+    y_scale_trans() +
+    
+    #theme, to be customized
+    theme_bw()
+  })
   
   output$plot <- renderPlot(
-    ggplot(
-      data = data_get(), 
-      mapping = aes_cust()
-    ) +
-
-      # custom geom
-      geomcust_boxplot() +
-      geomcust_line() +
-      geomcust_point() +
-
-      # title
-      labs(title = input$plotid) +
-      
-      #x-axis label
-      xlab(input$xvar) +
-      
-      #y-axis label
-      ylab(input$yvar) +
-      
-      # transform the x and y axis depending on user input
-      x_scale_trans() +
-      y_scale_trans() +
-      
-      #theme, to be customized
-      theme_bw()
+    final_ggplot()
   ) #|> 
   # plot only updates when button is pressed
   # remove dependency until large data testing
@@ -111,12 +111,11 @@ app_server <- function( input, output, session ) {
   
   #### show data table preview ####
   output$datatable <- reactable::renderReactable({
-    
     reactable::reactable(data_get(),
                          showPageSizeOptions = T,
                          pageSizeOptions = c(10, 25, 50, 100, 250, 500),
                          resizable = T,
-                         defaultPageSize = 25)
+                         defaultPageSize = 10)
   })
   
   #### choose columns ####
@@ -143,21 +142,67 @@ app_server <- function( input, output, session ) {
   ## function for ggplot mapping as factors
   
   ## conditionally set ggplot aes() mapping as factors
-  # this has the advantage of easily incorporating the z variable for drawing heatmaps??
+  ## separate input$xvar and input$yvar for later greater modularity (e.g. adding mappings)
+  # If your wrapper has a more specific interface with named arguments,
+  # you need "enquote and unquote":
+  # scatter_by <- function(data, x, y) {
+  #   x <- enquo(x)
+  #   y <- enquo(y)
+  #   
+  #   ggplot(data) + geom_point(aes(!!x, !!y))
   
-  aes_cust <- reactive({
-    if ((input$x_asfactor & input$y_asfactor) | (!xvar_isnumeric() & !yvar_isnumeric())) {
-      aes(x = factor(get(input$xvar), levels = input$xorder), y = factor(get(input$yvar), levels = input$yorder))
-    } else if ((input$x_asfactor | !xvar_isnumeric()) & yvar_isnumeric() & !input$y_asfactor) {
-      aes(x = factor(get(input$xvar), levels = input$xorder), y = get(input$yvar))
-    } else if ((input$y_asfactor | !yvar_isnumeric()) & !input$x_asfactor & xvar_isnumeric()) {
-      aes(x = get(input$xvar), y = factor(get(input$yvar), levels = input$yorder))
+  # aes_cust <- reactive({
+  #   if ((input$x_asfactor & input$y_asfactor) | (!xvar_isnumeric() & !yvar_isnumeric())) {
+  #     aes(x = factor(get(input$xvar), levels = input$xorder), y = factor(get(input$yvar), levels = input$yorder))
+  #   } else if ((input$x_asfactor | !xvar_isnumeric()) & yvar_isnumeric() & !input$y_asfactor) {
+  #     aes(x = factor(get(input$xvar), levels = input$xorder), y = get(input$yvar))
+  #   } else if ((input$y_asfactor | !yvar_isnumeric()) & !input$x_asfactor & xvar_isnumeric()) {
+  #     aes(x = get(input$xvar), y = factor(get(input$yvar), levels = input$yorder))
+  #   } else {
+  #     aes(x = get(input$xvar), y = get(input$yvar))
+  #   }
+  # }) 
+  
+  ## catch error if xorder and yorder is not initialized
+  xorder_catch <- reactive({
+    (if (identical(length(input$xorder), length(x_factorlevels_default()))) {
+      input$xorder
     } else {
-      aes(x = get(input$xvar), y = get(input$yvar))
-    }
-  }) 
+      x_factorlevels_default()
+    }) |> tryCatch(error = function(x) x_factorlevels_default())
+  })
   
-
+  yorder_catch <- reactive({
+    (if (identical(length(input$yorder), length(y_factorlevels_default()))) {
+      input$yorder
+    } else {
+      y_factorlevels_default()
+    }) |> tryCatch(error = function(y) y_factorlevels_default())
+  })
+  
+  ## format x and y variables as ggplot mapping objects
+  xvar_plot <- reactive({
+    if (input$x_asfactor | !xvar_isnumeric()) {
+      factor(
+        get(input$xvar),
+        levels = xorder_catch()
+      ) |> expr()
+    } else {
+      get(input$xvar) |> expr()
+    }
+  })
+  
+  yvar_plot <- reactive({
+    if (input$y_asfactor | !yvar_isnumeric()) {
+      factor(
+        get(input$yvar),
+        levels = yorder_catch()
+      ) |> expr()
+    } else {
+      get(input$yvar) |> expr()
+    }
+  })
+  
   #### numeric variable transformation ####
   # allow the user to set the scale transformation for 
   # numeric x and y
@@ -212,20 +257,20 @@ app_server <- function( input, output, session ) {
   #   })
   # 
   
-  observeEvent((!xvar_isnumeric() | input$x_asfactor), {
-    disabled_choices <- trans_continuous != "identity"
-    shinyWidgets::updatePickerInput(
-      session = session,
-      inputId = "xtrans",
-      choices = trans_continuous,
-      choicesOpt = list(
-        disabled = disabled_choices,
-        style = ifelse(disabled_choices,
-                       yes = "color: rgba(119, 119, 119, 0.5);",
-                       no = "")
-      )
-    )
-  }, ignoreInit = T)
+  # observeEvent((!xvar_isnumeric() | input$x_asfactor), {
+  #   disabled_choices <- trans_continuous != "identity"
+  #   shinyWidgets::updatePickerInput(
+  #     session = session,
+  #     inputId = "xtrans",
+  #     choices = trans_continuous,
+  #     choicesOpt = list(
+  #       disabled = disabled_choices,
+  #       style = ifelse(disabled_choices,
+  #                      yes = "color: rgba(119, 119, 119, 0.5);",
+  #                      no = "")
+  #     )
+  #   )
+  # }, ignoreInit = T)
   # 
   # observeEvent((!yvar_isnumeric() | input$y_asfactor), {
   #   disabled_choices <- "none"
@@ -244,25 +289,33 @@ app_server <- function( input, output, session ) {
   
   #### reorder x and y variable ui ####
   output$orderX <- renderUI({
-    if (!xvar_isnumeric | input$x_asfactor) {
-      sortable::rank_list(
-        text = "Category order",
-        labels = x_factorlevels_default(),
-        input_id = "xorder",
-        options = sortable::sortable_options(multiDrag = T)
+    if (!xvar_isnumeric() | input$x_asfactor) {
+      shinyWidgets::dropdown(
+        status = "primary",
+        label = "re-order x-variable",
+        sortable::rank_list(
+          text = "Category order",
+          labels = x_factorlevels_default(),
+          input_id = "xorder",
+          options = sortable::sortable_options(multiDrag = T)
+        )
       )
-    } else {"Not application for continuous x variable"}
+    } 
   })
   
   output$orderY <- renderUI({
-    if (!yvar_isnumeric | input$y_asfactor) {
-      sortable::rank_list(
-        text = "Category order",
-        labels = y_factorlevels_default(),
-        input_id = "yorder",
-        options = sortable::sortable_options(multiDrag = T)
+    if (!yvar_isnumeric() | input$y_asfactor) {
+      shinyWidgets::dropdown(
+        status = "primary",
+        label = "re-order y-variable",
+        sortable::rank_list(
+          text = "Category order",
+          labels = y_factorlevels_default(),
+          input_id = "yorder",
+          options = sortable::sortable_options(multiDrag = T)
+        )
       )
-    } else {"Not applicable for continuous y variable"}
+    }
   })
 
   #### customize type of plot ####
@@ -288,8 +341,8 @@ app_server <- function( input, output, session ) {
   
   #### debug console ####
   output$debug <- renderText({
-    input$xvar
-    exists("input$xvar")
+    input$xorder
+    input$yorder
   })
   
   #### session end scripts ####

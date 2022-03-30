@@ -20,6 +20,7 @@ Imports:
     reactable,
     readr,
     readxl,
+    rlang,
     shiny,
     shinybusy,
     shinythemes,
