@@ -165,39 +165,78 @@ app_ui <- function(request) {
                 fluidRow(
                   
                   ## choose the type of geom
+                  
                   column(
                     width = 12,
                     
-                    ## inputId$geompoint = geom_point
-                    shinyWidgets::switchInput(
-                      inputId = "geompoint",
-                      label = "points",
-                      value = T,
-                      labelWidth = 300
-                    ) |> prompter::add_prompt(
-                      position = "top",
-                      message = "Display individual data points (geom_point), suitable for continuous x and y variables.",
-                      size = "medium"
+                    ## continuous x and y
+                    
+                    fluidRow(
+                      h6("Continuous x & y"),
+                      ## inputId$geompoint = geom_point
+                      shinyWidgets::switchInput(
+                        inputId = "geompoint",
+                        label = "points",
+                        value = T,
+                        labelWidth = 200
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display individual data points (geom_point), 
+                      suitable for most plots with continuous x and y variables.",
+                        size = "medium"
+                      ),
+                      
+                      ## input$bin2d = geom_bin2d
+                      shinyWidgets::switchInput(
+                        inputId = "geombin2d",
+                        label = "density heatmap",
+                        value = F,
+                        labelWidth = 200
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display a density heatmap binning the data into 
+                      rectangles (geom_bin2d), suitable for continuous x and y 
+                      plots with a large number of data points.",
+                        size = "medium"
+                      ),
+                      
+                      ## input$geomdensity = geom_density2d
+                      shinyWidgets::switchInput(
+                        inputId = "geomdensity",
+                        label = "density contours",
+                        value = F,
+                        labelWidth = 200
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display a binned contour plot (geom_density2d),
+                      suitable for continuous x and y plots with a large number
+                      of data points.",
+                        size = "medium"
+                      ),
+                      
+                      ## input$geomdensity = geom_density2d
+                      shinyWidgets::switchInput(
+                        inputId = "geomdensityfilled",
+                        label = "filled density contours",
+                        value = F,
+                        labelWidth = 200
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display a binned contour with filled bands 
+                      (geom_density2d_filled), suitable for continuous x and y plots 
+                      with a large number of data points.",
+                        size = "medium"
+                      ),
+                      
                     ),
                     
-                    ## input$geomline = geom_line
-                    shinyWidgets::switchInput(
-                      inputId = "geomline",
-                      label = "line",
-                      value = F,
-                      labelWidth = 300
-                    ) |> prompter::add_prompt(
-                      position = "top",
-                      message = "Connect data points with a line (geom_line), suitable for data witha continuous y variable.",
-                      size = "medium"
-                    ),
-                    
+                    ## categorical x, continuous y
                     ## input$geomboxplot = geom_boxplot
                     shinyWidgets::switchInput(
                       inputId = "geomboxplot",
                       label = "box plot",
                       value = F,
-                      labelWidth = 300
+                      labelWidth = 200
                     ) |> prompter::add_prompt(
                       position = "top",
                       message = "Display a summary of the y variable using box plots (geom_boxplot), suitable for categorical x and continuous y variables.",

@@ -45,35 +45,36 @@ app_server <- function( input, output, session ) {
   
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
-  # see ?rlang::englue
-  
+
   final_ggplot <- reactive({
     ggplot(
-    data = data_get(), 
-    mapping = aes(x = !!xvar_plot(),
-                  y = !!yvar_plot())
-  ) +
-    
-    # custom geom
-    geomcust_boxplot() +
-    geomcust_line() +
-    geomcust_point() +
-    
-    # title
-    labs(title = input$plotid) +
-    
-    #x-axis label
-    xlab(input$xvar) +
-    
-    #y-axis label
-    ylab(input$yvar) +
-    
-    # transform the x and y axis depending on user input
-    x_scale_trans() +
-    y_scale_trans() +
-    
-    #theme, to be customized
-    theme_bw()
+      data = data_get(), 
+      mapping = aes(x = !!xvar_plot(),
+                    y = !!yvar_plot())
+    ) +
+      
+      # custom geoms
+      geomcust_bin2d() +
+      geomcust_densityfilled() +
+      geomcust_density() +
+      geomcust_boxplot() +
+      geomcust_point() +
+      
+      # title
+      labs(title = input$plotid) +
+      
+      #x-axis label
+      xlab(input$xvar) +
+      
+      #y-axis label
+      ylab(input$yvar) +
+      
+      # transform the x and y axis depending on user input
+      x_scale_trans() +
+      y_scale_trans() +
+      
+      #theme, to be customized
+      theme_bw()
   })
   
   output$plot <- renderPlot(
@@ -82,7 +83,42 @@ app_server <- function( input, output, session ) {
   # plot only updates when button is pressed
   # remove dependency until large data testing
   # bindEvent(input$makeplot)
-
+  
+  #### customize type of plot ####
+  
+  ## combined geom function
+  
+  ## individual geom functions
+  geomcust_point <- reactive({
+    if (input$geompoint) {
+      geom_point()
+    }
+  })
+  
+  geomcust_bin2d <- reactive({
+    if (input$geombin2d) {
+      geom_bin2d(bins = 40)
+    }
+  })
+  
+  geomcust_density <- reactive({
+    if (input$geomdensity) {
+      geom_density2d()
+    }
+  })
+  
+  geomcust_densityfilled <- reactive({
+    if (input$geomdensityfilled) {
+      geom_density2d_filled()
+    }
+  })
+  
+  geomcust_boxplot <- reactive({
+    if(input$geomboxplot) {
+      geom_boxplot()
+    }
+  })
+  
   #### load data ####
   ## file import
   ## if user select to upload, show the upload box
@@ -106,7 +142,7 @@ app_server <- function( input, output, session ) {
   data_get <- reactive({
     ## later fix so no data won't generate error in reactable output
     ## user uploaded data
-    (if (input$input_data_type == 1) {
+    if (input$input_data_type == 1) {
       
       ## find the file type of the user uploaded data
       if (tools::file_ext(input$data_user$datapath) == "xls") {
@@ -121,9 +157,7 @@ app_server <- function( input, output, session ) {
       data("example_dr", envir = environment()); example_dr
     } else {
       tibble(A = 0, B = 0)
-    }) |> tryCatch(
-      error = function(e) {tibble(A = 0, B = 0)}
-    )
+    }
   })
   
   #### show data table preview ####
@@ -209,6 +243,7 @@ app_server <- function( input, output, session ) {
     })
   })
   
+  
   #### numeric variable transformation ####
   # allow the user to set the scale transformation for 
   # numeric x and y
@@ -246,7 +281,7 @@ app_server <- function( input, output, session ) {
   
   ## if variable is factor, do not allow selection of transformation
   ## or user will be confused
-  
+  ## fixes are needed here, cannot apply transformation to numeric values
   observe({
     disabled_choices <- trans_continuous != "identity"
     
@@ -308,27 +343,6 @@ app_server <- function( input, output, session ) {
     }
   })
 
-  #### customize type of plot ####
-
-  ## individual geom functions
-  geomcust_point <- reactive({
-    if (input$geompoint) {
-      geom_point()
-    }
-  })
-  
-  geomcust_line <- reactive({
-    if(input$geomline) {
-      geom_line()
-    }
-  })
-  
-  geomcust_boxplot <- reactive({
-    if(input$geomboxplot) {
-      geom_boxplot()
-    }
-  })
-  
   #### debug console ####
   output$debug <- renderText({
     input$xorder

@@ -81,7 +81,7 @@ canPlotR is a browser-based tool to generate and export presentation- and public
 
 You can install the development version of canPlotR from Github so:
 
-```{r load message=FALSE, warning=FALSE}
+```
 # If you don't have the `devtools` package installed, you can install it from CRAN with
 # install.packages("devtools")
 library(devtools)
@@ -100,7 +100,7 @@ Unlike most common applications for making plots (Excel, GraphPad), canPlotR is 
 
 To run canPlotR, load the package and run it:
 
-```{r example, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```
 library(canPlotR)
 canPlotR::run_app()
 ```
