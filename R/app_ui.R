@@ -109,7 +109,14 @@ app_ui <- function(request) {
                     ),
                     
                     ## reorder categorical x, hide in dropdown since sometimes it's huge
-                    uiOutput("orderX")
+                    uiOutput("orderX") |> 
+                      prompter::add_prompt(
+                        position = "right",
+                        size = "large",
+                        message = "Click to open a menu which allows you to 
+                        reorder the categories. Drag to re-order. Click on an
+                        item to select it to reorder multiple items at a time."
+                      )
                   ),
                   column(
                     width = 6,
@@ -139,7 +146,14 @@ app_ui <- function(request) {
                     ),
                     
                     ## reorder categorical x, hide in dropdown since sometimes it's huge
-                    uiOutput("orderY")
+                    uiOutput("orderY")|> 
+                      prompter::add_prompt(
+                        position = "right",
+                        size = "large",
+                        message = "Click to open a menu which allows you to 
+                        reorder the categories. Drag to re-order. Click on an
+                        item to select it to reorder multiple items at a time."
+                      )
                   )
                 )
               ),

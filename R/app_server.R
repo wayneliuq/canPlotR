@@ -8,15 +8,30 @@ app_server <- function( input, output, session ) {
   #### common functions ####
   
   ## check whether variables are numeric
-  ##need fixes here
+  # error occurs before input$xvar is initialized, e.g. before user loads data
+  # or switches to tab to select xvar and yvar
+  # need to optimize script to avoid using tryCatch as it is computationally expensive
+  # design the app to avoid error-causing situations
+  
   xvar_isnumeric <- reactive({
-    tryCatch({data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> is.numeric()},
-             error = function(e) {F})
+    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> is.numeric()) |>  
+      tryCatch(error = function(e) {F})
   })
   
   yvar_isnumeric <- reactive({
-    tryCatch({data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> is.numeric()},
-             error = function(e) {F})
+    {data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> is.numeric()} |> 
+      tryCatch(error = function(e) {F})
+  })
+  
+  # error occurs when the input$x_asfactor checkbox has never been initialized
+  xvar_iscategorical <- reactive({
+    (!xvar_isnumeric() | input$x_asfactor) |> 
+      tryCatch(error = function(e) {F})
+  })
+  
+  yvar_iscategorical <- reactive({
+    (!yvar_isnumeric() | input$y_asfactor) |> 
+      tryCatch(error = function(e) {F})
   })
   
   ## get the factor levels of variables
@@ -144,6 +159,7 @@ app_server <- function( input, output, session ) {
   ## function for ggplot mapping as factors
   
   ## catch error if xorder and yorder is not initialized
+  ## this is only thought to occur before the user clicked the dropdown menu
   xorder_catch <- reactive({
     (if (identical(length(input$xorder), length(x_factorlevels_default()))) {
       input$xorder
@@ -172,25 +188,25 @@ app_server <- function( input, output, session ) {
   #   ggplot(data) + geom_point(aes(!!x, !!y))
   
   xvar_plot <- reactive({
-    (if (input$x_asfactor | !xvar_isnumeric()) {
+    (if (xvar_iscategorical()) {
       factor(
         get(input$xvar),
         levels = xorder_catch()
       ) |> expr()
     } else {
       get(input$xvar) |> expr()
-    }) |> tryCatch(error = function(e) 0)
+    })
   })
   
   yvar_plot <- reactive({
-    (if (input$y_asfactor | !yvar_isnumeric()) {
+    (if (yvar_iscategorical()) {
       factor(
         get(input$yvar),
         levels = yorder_catch()
       ) |> expr()
     } else {
       get(input$yvar) |> expr()
-    }) |> tryCatch(error = function(e) 0)
+    })
   })
   
   #### numeric variable transformation ####
@@ -217,69 +233,53 @@ app_server <- function( input, output, session ) {
   )
   
   x_scale_trans <- reactive({
-    if (xvar_isnumeric() & isFALSE(input$x_asfactor)) {
+    if (!xvar_iscategorical()) {
       scale_x_continuous(trans = input$xtrans)
     }
   })
   
   y_scale_trans <- reactive({
-    if (yvar_isnumeric() & isFALSE(input$y_asfactor)) {
+    if (!yvar_iscategorical()) {
       scale_y_continuous(trans = input$ytrans)
     }
   })
   
   ## if variable is factor, do not allow selection of transformation
   ## or user will be confused
-  # observe(!xvar_isnumeric() | input$x_asfactor) |>
-  #   bindEvent({
-  #     disabled_choices <- trans_continuous == "identity"
-  #     shinyWidgets::updatePickerInput(
-  #       session = session,
-  #       inputId = "xtrans",
-  #       choices = "none",
-  #       choicesOpt = list(
-  #         disabled = disabled_choices,
-  #         style = ifelse(disabled_choices,
-  #                        yes = "color: rgba(119, 119, 119, 0.5);",
-  #                        no = "")
-  #       )
-  #     )
-  #   })
-  # 
   
-  # observeEvent((!xvar_isnumeric() | input$x_asfactor), {
-  #   disabled_choices <- trans_continuous != "identity"
-  #   shinyWidgets::updatePickerInput(
-  #     session = session,
-  #     inputId = "xtrans",
-  #     choices = trans_continuous,
-  #     choicesOpt = list(
-  #       disabled = disabled_choices,
-  #       style = ifelse(disabled_choices,
-  #                      yes = "color: rgba(119, 119, 119, 0.5);",
-  #                      no = "")
-  #     )
-  #   )
-  # }, ignoreInit = T)
-  # 
-  # observeEvent((!yvar_isnumeric() | input$y_asfactor), {
-  #   disabled_choices <- "none"
-  #   shinyWidgets::updatePickerInput(
-  #     session = session,
-  #     inputId = "ytrans",
-  #     choices = "none",
-  #     choicesOpt = list(
-  #       disabled = disabled_choices,
-  #       style = ifelse(disabled_choices,
-  #                      yes = "color: rgba(119, 119, 119, 0.5);",
-  #                      no = "")
-  #     )
-  #   )
-  # }, ignoreInit = T)
-  
+  observe({
+    disabled_choices <- trans_continuous != "identity"
+    
+    if (xvar_iscategorical()) {
+      shinyWidgets::updatePickerInput(
+        session = session,
+        inputId = "xtrans",
+        choices = trans_continuous,
+        choicesOpt = list(disabled = disabled_choices,
+                          style = ifelse(disabled_choices,
+                                         yes = "color: rgba(119, 119, 119, 0.5);",
+                                         no = ""))
+        
+      )
+    }
+    
+    if (yvar_iscategorical()) {
+      shinyWidgets::updatePickerInput(
+        session = session,
+        inputId = "ytrans",
+        choices = trans_continuous,
+        choicesOpt = list(disabled = disabled_choices,
+                          style = ifelse(disabled_choices,
+                                         yes = "color: rgba(119, 119, 119, 0.5);",
+                                         no = ""))
+        
+      )
+    }
+  })
+
   #### reorder x and y variable ui ####
   output$orderX <- renderUI({
-    if (!xvar_isnumeric() | input$x_asfactor) {
+    if (xvar_iscategorical()) {
       shinyWidgets::dropdown(
         status = "primary",
         label = "re-order x-variable",
@@ -294,7 +294,7 @@ app_server <- function( input, output, session ) {
   })
   
   output$orderY <- renderUI({
-    if (!yvar_isnumeric() | input$y_asfactor) {
+    if (yvar_iscategorical()) {
       shinyWidgets::dropdown(
         status = "primary",
         label = "re-order y-variable",
