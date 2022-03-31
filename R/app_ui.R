@@ -172,7 +172,7 @@ app_ui <- function(request) {
                     ## continuous x and y
                     
                     fluidRow(
-                      h6("Continuous x & y"),
+                      p(strong("Continuous x & y")),
                       ## inputId$geompoint = geom_point
                       shinyWidgets::switchInput(
                         inputId = "geompoint",
@@ -231,17 +231,51 @@ app_ui <- function(request) {
                     ),
                     
                     ## categorical x, continuous y
-                    ## input$geomboxplot = geom_boxplot
-                    shinyWidgets::switchInput(
-                      inputId = "geomboxplot",
-                      label = "box plot",
-                      value = F,
-                      labelWidth = 200
-                    ) |> prompter::add_prompt(
-                      position = "top",
-                      message = "Display a summary of the y variable using box plots (geom_boxplot), suitable for categorical x and continuous y variables.",
-                      size = "medium"
+                    fluidRow(
+                      p(strong("Categorical x, continuous y")),
+                      ## input$geomboxplot = geom_boxplot
+                      shinyWidgets::switchInput(
+                        inputId = "geomboxplot",
+                        label = "box plot",
+                        value = F,
+                        labelWidth = 200
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display a summary of the y variable using 
+                        box plots (geom_boxplot), suitable for categorical x and 
+                        continuous y variables.",
+                        size = "medium"
+                      ),
+                      
+                      ## input$geomviolin = geom_violin
+                      shinyWidgets::switchInput(
+                        inputId = "geomviolin",
+                        label = "violin plot",
+                        value = F,
+                        labelWidth = 200
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display a summary of the y variable using 
+                        violin plots (geom_violin), suitable for categorical x and 
+                        continuous y variables.",
+                        size = "medium"
+                      ),
+                      
+                      ## input$dotplot = geom_dotplot
+                      shinyWidgets::switchInput(
+                        inputId = "geomdotplot",
+                        label = "dot plot",
+                        value = F,
+                        labelWidth = 200
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display individal y datapoints, suitable for categorical x and 
+                        continuous y variables.",
+                        size = "medium"
+                      )
+                      
                     )
+                    
                   )
                 )
               )
@@ -296,15 +330,15 @@ app_ui <- function(request) {
         column(
           width = 6,
           wellPanel(
-            tags$h5("Statistics"),
+            tags$h5("statistics"),
             tabsetPanel(
               tabPanel(
                 title = "statistics 1",
                 "statistics 1"
               ),
               tabPanel(
-                title = "statistics 2",
-                "statistics 2"
+                title = "Summary Statistics",
+                reactable::reactableOutput("datasummary")
               )
             )
           )

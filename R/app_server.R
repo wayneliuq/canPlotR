@@ -58,6 +58,8 @@ app_server <- function( input, output, session ) {
       geomcust_densityfilled() +
       geomcust_density() +
       geomcust_boxplot() +
+      geomcust_violin() +
+      geomcust_dotplot() +
       geomcust_point() +
       
       # title
@@ -89,6 +91,8 @@ app_server <- function( input, output, session ) {
   ## combined geom function
   
   ## individual geom functions
+  
+  ## continuous x & y
   geomcust_point <- reactive({
     if (input$geompoint) {
       geom_point()
@@ -113,9 +117,27 @@ app_server <- function( input, output, session ) {
     }
   })
   
+  ## categorical x, continuous y
   geomcust_boxplot <- reactive({
-    if(input$geomboxplot) {
+    if (input$geomboxplot) {
       geom_boxplot()
+    }
+  })
+  
+  geomcust_violin <- reactive({
+    if (input$geomviolin) {
+      geom_violin(scale = "area")
+    }
+  })
+  
+  geomcust_dotplot <- reactive({
+    if (input$geomdotplot) {
+      geom_dotplot(
+        binaxis = "y", 
+        stackdir = "center",
+        binwidth = 0.01 * (max(data_get() |> select(rlang::sym(input$yvar)) |> unlist()) -
+                             min(data_get() |> select(rlang::sym(input$yvar)) |> unlist()))
+      )
     }
   })
   
@@ -158,6 +180,40 @@ app_server <- function( input, output, session ) {
     } else {
       tibble(A = 0, B = 0)
     }
+  })
+  
+  #### summarise data ####
+  ## later modify group_by so it incorporates facets, and mappings e.g. (color/fill)
+  data_summary <- reactive({
+    
+    if (
+      (xvar_iscategorical() & !yvar_iscategorical()) |> 
+      tryCatch(error = function(e) F)
+    ) {
+      data_get() |> 
+        group_by("x" = get(input$xvar)) |> ## need to fix so summary displays the x variable name
+        summarise(
+          count = n(),
+          mean = mean(get(input$yvar), na.rm = T),
+          median = median(get(input$yvar), na.rm = T),
+          "geometric mean" = geomean(get(input$yvar), na.rm = T),
+          variance = var(get(input$yvar), na.rm = T),
+          "standard deviation" = sd(get(input$yvar), na.rm = T),
+          "standard error of mean" = sd(get(input$yvar), na.rm = T) / sqrt(n()),
+          "median absolute deviation" = mad(get(input$yvar), na.rm = T)
+        )
+    } else {
+      "error"
+    }
+
+  })
+  
+  output$datasummary <- reactable::renderReactable({
+    reactable::reactable(data_summary(),
+                         showPageSizeOptions = T,
+                         pageSizeOptions = c(10, 25, 50, 100),
+                         resizable = T,
+                         defaultPageSize = 10)
   })
   
   #### show data table preview ####
@@ -296,6 +352,12 @@ app_server <- function( input, output, session ) {
                                          no = ""))
         
       )
+    } else {
+      shinyWidgets::updatePickerInput(
+        session = session,
+        inputId = "xtrans",
+        choices = trans_continuous
+      )
     }
     
     if (yvar_iscategorical()) {
@@ -308,6 +370,12 @@ app_server <- function( input, output, session ) {
                                          yes = "color: rgba(119, 119, 119, 0.5);",
                                          no = ""))
         
+      )
+    } else {
+      shinyWidgets::updatePickerInput(
+        session = session,
+        inputId = "ytrans",
+        choices = trans_continuous
       )
     }
   })
@@ -345,8 +413,7 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderText({
-    input$xorder
-    input$yorder
+    data_summary() |> print()
   })
   
   #### session end scripts ####
