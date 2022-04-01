@@ -6,7 +6,7 @@
 #' @noRd
 app_server <- function( input, output, session ) {
   #### common functions ####
-  
+
   ## check whether variables are numeric
   # error occurs before input$xvar is initialized, e.g. before user loads data
   # or switches to tab to select xvar and yvar
@@ -87,46 +87,109 @@ app_server <- function( input, output, session ) {
   # bindEvent(input$makeplot)
   
   #### customize type of plot ####
+  ## add UI element to choose separating data
+  data_vars <- reactive({
+    data_get() |> colnames()
+  })
+
+  output$color_var <- renderUI(
+    fluidRow(
+      shinyWidgets::pickerInput(
+        inputId = "colorvar",
+        label = "Select a variable to color the data:",
+        choices = c("none", data_vars()),
+        multiple = F,
+        selected = 1
+      ),
+      
+      checkboxInput(
+        inputId = "colorvar_asfactor",
+        label = "Format as categorical"
+      ) |> prompter::add_prompt(
+        position = "right",
+        size = "large",
+        message = "If the selected variable consists of numbers, a continuous
+        solor scale will automatically be allowed to the plot where applicable. 
+        If you wish to format the variable as a categorical variable (factor), 
+        check this box. If the variable you selected is already detected as a
+        categorical variable, nothing will happen."
+      )
+      
+    )
+  )
+
+  ## mapping depending on whether color or fill needs to be changed
   
-  ## combined geom function
+  colorvar_catch <- reactive({
+    tryCatch(input$colorvar != "none", error = function(e) F)
+  })
+  
+  aes_cust_colour <- reactive({
+    if (colorvar_catch()) {
+      aes(colour = get(input$colorvar))
+    } else {aes()}
+  })
+  
+  aes_cust_fill <- reactive({
+    if (colorvar_catch()) {
+      aes(fill = get(input$colorvar))
+    } else {aes()}
+  })
+  
+  aes_cust_colourfill <- reactive({
+    if (colorvar_catch()) {
+      aes(colour = get(input$colorvar),
+          fill = get(input$colorvar))
+    } else {aes()}
+  })
   
   ## individual geom functions
   
   ## continuous x & y
   geomcust_point <- reactive({
     if (input$geompoint) {
-      geom_point()
+      geom_point(
+        mapping = aes_cust_colour()
+      ) #color (set color)
     }
   })
   
   geomcust_bin2d <- reactive({
     if (input$geombin2d) {
-      geom_bin2d(bins = 40)
-    }
+      geom_bin2d(bins = 40, 
+                 mapping = aes_cust_fill()) #fill (set fill)
+    } 
   })
   
   geomcust_density <- reactive({
     if (input$geomdensity) {
-      geom_density2d()
+      geom_density2d(
+        mapping = aes_cust_colour()
+      ) #color (set color)
     }
   })
   
   geomcust_densityfilled <- reactive({
     if (input$geomdensityfilled) {
-      geom_density2d_filled()
+      geom_density2d_filled(
+        mapping = aes_cust_colour()
+      ) #fill is shading, color is border (set color? or can't set)
     }
   })
   
   ## categorical x, continuous y
   geomcust_boxplot <- reactive({
     if (input$geomboxplot) {
-      geom_boxplot()
+      geom_boxplot(
+        mapping = aes_cust_fill()
+      ) #fill is shading, color is border (set fill)
     }
   })
   
   geomcust_violin <- reactive({
     if (input$geomviolin) {
-      geom_violin(scale = "area")
+      geom_violin(scale = "area",
+                  mapping = aes_cust_fill()) #fill is shading, color is border (set fill)
     }
   })
   
@@ -136,8 +199,9 @@ app_server <- function( input, output, session ) {
         binaxis = "y", 
         stackdir = "center",
         binwidth = 0.01 * (max(data_get() |> select(rlang::sym(input$yvar)) |> unlist()) -
-                             min(data_get() |> select(rlang::sym(input$yvar)) |> unlist()))
-      )
+                             min(data_get() |> select(rlang::sym(input$yvar)) |> unlist())),
+        mapping = aes_cust_colourfill()
+      ) #fill is shading, color is border (set both)
     }
   })
   
@@ -298,7 +362,6 @@ app_server <- function( input, output, session ) {
       get(input$yvar) |> expr()
     })
   })
-  
   
   #### numeric variable transformation ####
   # allow the user to set the scale transformation for 

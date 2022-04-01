@@ -11,7 +11,7 @@ app_ui <- function(request) {
     prompter::use_prompt(),
     shinybusy::add_busy_bar(timeout = 500),
     
-    # Your application UI logic 
+    ## Application UI
     fluidPage(
       
       #### theme ####
@@ -38,34 +38,36 @@ app_ui <- function(request) {
               
               #### upload and select data ####
               tabPanel(
-                title = "1. Upload",
+                title = "1. Select Data",
                 
                 ## plot name
-                prompter::add_prompt(
+                
+                fluidRow(
                   textInput(inputId = "plotid",
                             label = "Plot Name",
                             placeholder = "plot", 
-                            width = "100%"),
-                  position = "right",
-                  size = "large",
-                  message = "Enter the name for this plot here. 
+                            width = "100%") |> 
+                    prompter::add_prompt(
+                      position = "right",
+                      size = "large",
+                      message = "Enter the name for this plot here. 
                          This name will be used as the title, and for 
-                         exporting the exported plot."),
+                         exporting the exported plot.")
+                ),
+
                 
                 ## select data set
-                
-                selectInput("Choose data source", 
-                            inputId = "input_data_type",
-                            choices = c(
-                              "Upload User Data" = 1,
-                              "Example Data" = 2
-                            )),
-                uiOutput("data_ui")
-              ),
-              
-              #### choose columns to plot ####
-              tabPanel(
-                title = "2. Choose columns",
+                fluidRow(
+                  selectInput("Choose data source", 
+                              inputId = "input_data_type",
+                              choices = c(
+                                "Upload User Data" = 1,
+                                "Example Data" = 2
+                              )),
+                  uiOutput("data_ui")
+                ),
+
+                #### choose columns to plot ####
                 
                 ## choose x and y
                 fluidRow(
@@ -158,9 +160,55 @@ app_ui <- function(request) {
                 )
               ),
               
-              #### choose type of plot ####
               tabPanel(
-                title = "3. Choose Plot",
+                title = "2. Stratify Data",
+                uiOutput(outputId = "color_var")
+
+              ),
+              
+              tabPanel(
+                title = "3. NA",
+                
+              )
+            )
+          )
+        ),
+        
+        #### main plot output ####
+        
+        column(
+          width = 6,
+          
+          ## remove update plot button dependency until testing with large datasets
+          # fluidRow(
+          #   actionButton(
+          #     inputId = "makeplot",
+          #     label = "Update Plot",
+          #     icon = icon("chart-bar"),
+          #     class = "btn-primary"
+          #   )
+          # ),
+          
+          fluidRow(
+            plotOutput("plot")
+          )
+        )
+        
+      ),
+      
+      fluidRow(
+        
+        #### plot appearance ####
+        
+        column(
+          width = 6,
+          wellPanel(
+            tags$h5("Plot Appearance"),
+            tabsetPanel(
+              tabPanel(
+                title = "Plot Type",
+                
+                #### choose type of plot ####
                 
                 fluidRow(
                   
@@ -278,45 +326,6 @@ app_ui <- function(request) {
                     
                   )
                 )
-              )
-            )
-          )
-        ),
-        
-        #### main plot output ####
-        
-        column(
-          width = 6,
-          
-          ## remove update plot button dependency until testing with large datasets
-          # fluidRow(
-          #   actionButton(
-          #     inputId = "makeplot",
-          #     label = "Update Plot",
-          #     icon = icon("chart-bar"),
-          #     class = "btn-primary"
-          #   )
-          # ),
-          
-          fluidRow(
-            plotOutput("plot")
-          )
-        )
-        
-      ),
-      
-      fluidRow(
-        
-        #### plot appearance ####
-        
-        column(
-          width = 6,
-          wellPanel(
-            tags$h5("Plot Appearance"),
-            tabsetPanel(
-              tabPanel(
-                title = "appearance 1",
-                "appearance 1"
               ),
               tabPanel(
                 title = "apperance 2",
