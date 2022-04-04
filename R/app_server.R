@@ -225,7 +225,7 @@ app_server <- function( input, output, session ) {
   })
   
   ## get the real data
-  data_get <- reactive({
+  data_get() <- reactive({
     ## later fix so no data won't generate error in reactable output
     ## user uploaded data
     if (input$input_data_type == 1) {
@@ -245,6 +245,10 @@ app_server <- function( input, output, session ) {
       tibble(A = 0, B = 0)
     }
   })
+  
+  ## to send to UI
+  # https://shiny.rstudio.com/articles/dynamic-ui.html
+  output$data <- data_get()
   
   #### summarise data ####
   ## later modify group_by so it incorporates facets, and mappings e.g. (color/fill)
@@ -478,6 +482,9 @@ app_server <- function( input, output, session ) {
   output$debug <- renderText({
     data_summary() |> print()
   })
+  
+  #### output options ####
+  outputOptions(output, "data", suspendWhenHidden = FALSE)
   
   #### session end scripts ####
   # session$onSessionEnded(function() {

@@ -11,7 +11,7 @@ app_ui <- function(request) {
     prompter::use_prompt(),
     shinybusy::add_busy_bar(timeout = 500),
     
-    ## Application UI
+    ## Application UI 
     fluidPage(
       
       #### theme ####
