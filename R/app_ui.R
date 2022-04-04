@@ -64,7 +64,22 @@ app_ui <- function(request) {
                                 "Upload User Data" = 1,
                                 "Example Data" = 2
                               )),
-                  uiOutput("data_ui")
+                  # uiOutput("data_ui"),
+                  conditionalPanel(
+                    condition = "input.input_data_type == 1",
+                    fileInput(inputId = "data_user",
+                              label = "Upload your data",
+                              accept = c(".csv", ".txt", ".xls", ".xlsx")) |>
+                      prompter::add_prompt(
+                        position = "right",
+                        message = "Supported filetypes include 'xls', 'xlsx', 'csv', and 'txt'. 
+						                      By default, only the first sheet of Excel spreadsheets will be loaded.",
+                        size = "large")
+                  ),
+                  conditionalPanel(
+                    condition = "input.input_data_type == 1",
+                    renderText("Example data loaded.")
+                  )
                 ),
 
                 #### choose columns to plot ####

@@ -208,24 +208,24 @@ app_server <- function( input, output, session ) {
   #### load data ####
   ## file import
   ## if user select to upload, show the upload box
-  output$data_ui <- renderUI({
-    if (input$input_data_type == 1) {
-      prompter::add_prompt(
-        fileInput(inputId = "data_user",
-                  label = "Upload your data",
-                  accept = c(".csv", ".txt", ".xls", ".xlsx")),
-        position = "right",
-        message = "Supported filetypes include 'xls', 'xlsx', 'csv', and 'txt'. By default, only the first sheet of Excel spreadsheets will be loaded.",
-        size = "large"
-      )
-      
-    } else if (input$input_data_type == 2) {
-      renderText("Example dose-response data loaded.")
-    }
-  })
+#  output$data_ui <- renderUI({
+#    if (input$input_data_type == 1) {
+#      prompter::add_prompt(
+#        fileInput(inputId = "data_user",
+#                  label = "Upload your data",
+#                  accept = c(".csv", ".txt", ".xls", ".xlsx")),
+#        position = "right",
+#        message = "Supported filetypes include 'xls', 'xlsx', 'csv', and 'txt'. By default, only the first sheet of Excel spreadsheets will be loaded.",
+#        size = "large"
+#      )
+#      
+#    } else if (input$input_data_type == 2) {
+#      renderText("Example dose-response data loaded.")
+#    }
+#  })
   
   ## get the real data
-  data_get() <- reactive({
+  data_get <- reactive({
     ## later fix so no data won't generate error in reactable output
     ## user uploaded data
     if (input$input_data_type == 1) {
@@ -248,7 +248,7 @@ app_server <- function( input, output, session ) {
   
   ## to send to UI
   # https://shiny.rstudio.com/articles/dynamic-ui.html
-  output$data <- data_get()
+  output$data <- reactive({data_get()})
   
   #### summarise data ####
   ## later modify group_by so it incorporates facets, and mappings e.g. (color/fill)
