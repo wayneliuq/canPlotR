@@ -1,6 +1,6 @@
 #' The application User-Interface
-#' 
-#' @param request Internal parameter for `{shiny}`. 
+#'
+#' @param request Internal parameter for `{shiny}`.
 #'     DO NOT REMOVE.
 #' @import shiny
 #' @noRd
@@ -10,113 +10,142 @@ app_ui <- function(request) {
     golem_add_external_resources(),
     prompter::use_prompt(),
     shinybusy::add_busy_bar(timeout = 500),
-    
-    ## Application UI 
+
+    ## Application UI
     fluidPage(
-      
+
       #### theme ####
       theme = shinythemes::shinytheme("paper"),
-      
+
       #### title ####
-      
+
       titlePanel(
         title = "canPlotR", ## later reduce text size
         windowTitle = "canPlotR"
       ),
-      
+
       #### main page ####
-      
+
       fluidRow(
-        
+
         #### plot data elements ####
-        
+
         column(
           width = 6,
           wellPanel(
             tags$h5("Plot Data"),
             tabsetPanel(
-              
+
               #### upload and select data ####
               tabPanel(
                 title = "1. Select Data",
-                
+
                 ## plot name
-                
+
                 fluidRow(
                   textInput(inputId = "plotid",
                             label = "Plot Name",
-                            placeholder = "plot", 
-                            width = "100%") |> 
+                            placeholder = "plot",
+                            width = "100%") |>
                     prompter::add_prompt(
                       position = "right",
                       size = "large",
-                      message = "Enter the name for this plot here. 
-                         This name will be used as the title, and for 
+                      message = "Enter the name for this plot here.
+                         This name will be used as the title, and for
                          exporting the exported plot.")
                 ),
 
-                
+
                 ## select data set
                 fluidRow(
-                  selectInput("Choose data source", 
+                  selectInput( "Choose data source",
                               inputId = "input_data_type",
                               choices = c(
-                                "Upload User Data" = 1,
+                                "Upload Data" = 1,
                                 "Example Data" = 2
-                              )),
-                  # uiOutput("data_ui"),
+                              ),
+                            selected = 1),
+
+                  ## upload box for user data
                   conditionalPanel(
                     condition = "input.input_data_type == 1",
                     fileInput(inputId = "data_user",
                               label = "Upload your data",
-                              accept = c(".csv", ".txt", ".xls", ".xlsx")) |>
+                              accept = c(".csv", ".txt", ".xls", ".xlsx"),
+                              placeholder = "csv, txt, xls, and xlsx files") |>
                       prompter::add_prompt(
                         position = "right",
-                        message = "Supported filetypes include 'xls', 'xlsx', 'csv', and 'txt'. 
+                        message = "Supported filetypes include 'xls', 'xlsx', 'csv', and 'txt'.
 						                      By default, only the first sheet of Excel spreadsheets will be loaded.",
                         size = "large")
                   ),
+
+                  ## prompt that example data is loaded
                   conditionalPanel(
-                    condition = "input.input_data_type == 1",
+                    condition = "input.input_data_type == 2",
                     renderText("Example data loaded.")
-                  )
+                  ),
+
+                  ## action button bound to data loading
+                  actionButton(inputId = "data_load",
+                               label = "Load Data!",
+                               class = "btn-success") |>
+                    prompter::add_prompt(
+                      position = "right",
+                      message = "Click here to load the data you selected.",
+                      size = "large"
+                    )
                 ),
 
                 #### choose columns to plot ####
-                
+
                 ## choose x and y
                 fluidRow(
+                  hr(),
+                  p(strong("Choose x and y variables")),
+
                   column(
                     width = 6,
-                    uiOutput("chooseX")
+                    selectInput(inputId = "xvar",
+                                   label = "Choose x variable",
+                                   choices = character(0),
+                                   selectize = F,
+                                   multiple = F,
+                                   size = 4)
                   ),
                   column(
                     width = 6,
-                    uiOutput("chooseY")
+                    selectInput(inputId = "yvar",
+                                   label = "Choose y variable",
+                                   choices = character(0),
+                                   selectize = F,
+                                   multiple = F,
+                                   size = 4)
                   )
                 ),
-                
+
                 #### asfactor and transformations ####
                 fluidRow(
                   column(
                     width = 6,
-                    
+
                     ## format x as factor
-                    checkboxInput(
-                      inputId = "x_asfactor",
-                      label = "Format as categorical",
-                      value = F
-                    ) |> prompter::add_prompt(
-                      position = "right",
-                      size = "large",
-                      message = "If the column you selected as the x variable 
-                      conists of only numbers, it will be assumed to be a 
-                      continuous variable. Select this box if you want to format 
-                      the x-variable as a categorical variable (factor). If the 
-                      variable is already detected as categorical, nothing will 
-                      happen."
+                    conditionalPanel(
+                      condition = "output.xvar_isnumeric",
+                      checkboxInput(
+                        inputId = "x_asfactor",
+                        label = "Format as categorical",
+                        value = F
+                      ) |> prompter::add_prompt(
+                        position = "right",
+                        size = "large",
+                        message = "If the column you selected as the x variable
+                        conists of only numbers, it will be assumed to be a
+                        continuous variable. Select this box if you want to format
+                        the x-variable as a categorical variable (factor)."
+                      )
                     ),
-                    
+
                     ## select transformation for numeric x variable
                     shinyWidgets::pickerInput(
                       inputId = "xtrans",
@@ -124,36 +153,49 @@ app_ui <- function(request) {
                       choices = trans_continuous,
                       selected = 1
                     ),
-                    
-                    ## reorder categorical x, hide in dropdown since sometimes it's huge
-                    uiOutput("orderX") |> 
-                      prompter::add_prompt(
-                        position = "right",
-                        size = "large",
-                        message = "Click to open a menu which allows you to 
-                        reorder the categories. Drag to re-order. Click on an
-                        item to select it to reorder multiple items at a time."
-                      )
+
+                    # reorder categorical x, hide in dropdown since sometimes it's huge
+                    conditionalPanel(
+                      condition = "output.xvar_isfactor",
+                      shinyWidgets::dropdown(
+                        status = "primary",
+                        label = "re-order x categories",
+                        shinyjqui::orderInput(
+                          inputId = "xorder",
+                          label = NULL,
+                          items = c("NA"),
+                          item_class = "primary"
+                        )
+                      ) |> prompter::add_prompt(
+                             position = "right",
+                             size = "large",
+                             message = "Click to open a menu which allows you to
+                             reorder the categories. Drag to re-order."
+                           )
+                    )
+
                   ),
+
                   column(
                     width = 6,
-                    
+
                     ## format y as factor
-                    checkboxInput(
-                      inputId = "y_asfactor",
-                      label = "Format as categorical",
-                      value = F
-                    ) |> prompter::add_prompt(
-                      position = "right",
-                      size = "large",
-                      message = "If the column you selected as the y variable 
-                      conists of only numbers, it will be assumed to be a 
-                      continuous variable. Select this box if you want to format 
-                      the x-variable as a categorical variable (factor). If the 
-                      variable is already detected as categorical, nothing will 
-                      happen."
+                    conditionalPanel(
+                      condition = "output.yvar_isnumeric",
+                      checkboxInput(
+                        inputId = "y_asfactor",
+                        label = "Format as categorical",
+                        value = F
+                      ) |> prompter::add_prompt(
+                        position = "right",
+                        size = "large",
+                        message = "If the column you selected as the y variable
+                        conists of only numbers, it will be assumed to be a
+                        continuous variable. Select this box if you want to format
+                        the x-variable as a categorical variable (factor)."
+                      )
                     ),
-                    
+
                     ## select transformation for numeric y variable
                     shinyWidgets::pickerInput(
                       inputId = "ytrans",
@@ -161,39 +203,49 @@ app_ui <- function(request) {
                       choices = trans_continuous,
                       selected = 1
                     ),
-                    
+
                     ## reorder categorical x, hide in dropdown since sometimes it's huge
-                    uiOutput("orderY")|> 
-                      prompter::add_prompt(
-                        position = "right",
-                        size = "large",
-                        message = "Click to open a menu which allows you to 
-                        reorder the categories. Drag to re-order. Click on an
-                        item to select it to reorder multiple items at a time."
-                      )
+                    conditionalPanel(
+                      condition = "output.yvar_isfactor",
+                      shinyWidgets::dropdown(
+                        status = "primary",
+                        label = "re-order y categories",
+                        shinyjqui::orderInput(
+                          inputId = "yorder",
+                          label = NULL,
+                          items = c("NA"),
+                          item_class = "primary"
+                        )
+                      ) |> prompter::add_prompt(
+                             position = "right",
+                             size = "large",
+                             message = "Click to open a menu which allows you to
+                             reorder the categories. Drag to re-order."
+                           )
+                    )
                   )
                 )
               ),
-              
+
               tabPanel(
                 title = "2. Stratify Data",
                 uiOutput(outputId = "color_var")
 
               ),
-              
+
               tabPanel(
                 title = "3. NA",
-                
+
               )
             )
           )
         ),
-        
+
         #### main plot output ####
-        
+
         column(
           width = 6,
-          
+
           ## remove update plot button dependency until testing with large datasets
           # fluidRow(
           #   actionButton(
@@ -203,18 +255,27 @@ app_ui <- function(request) {
           #     class = "btn-primary"
           #   )
           # ),
-          
+
+          # make resizable with shinyjqui
+          # With mouse interactions attached, the corresponding interaction
+          # states, e.g. position of draggable, size of resizable, selected of
+          # selectable and order of sortable, will be sent to server side in the
+          # form of input$<id>_<state>. The default values can be overridden by
+          # setting the shiny option in the options parameter. Please see the
+          # vignette Introduction to shinyjqui for more details.
+
           fluidRow(
-            plotOutput("plot")
+            plotOutput("plot") |>
+              shinyjqui::jqui_resizable()
           )
         )
-        
+
       ),
-      
+
       fluidRow(
-        
+
         #### plot appearance ####
-        
+
         column(
           width = 6,
           wellPanel(
@@ -222,18 +283,18 @@ app_ui <- function(request) {
             tabsetPanel(
               tabPanel(
                 title = "Plot Type",
-                
+
                 #### choose type of plot ####
-                
+
                 fluidRow(
-                  
+
                   ## choose the type of geom
-                  
+
                   column(
                     width = 12,
-                    
+
                     ## continuous x and y
-                    
+
                     fluidRow(
                       p(strong("Continuous x & y")),
                       ## inputId$geompoint = geom_point
@@ -244,11 +305,11 @@ app_ui <- function(request) {
                         labelWidth = 200
                       ) |> prompter::add_prompt(
                         position = "top",
-                        message = "Display individual data points (geom_point), 
+                        message = "Display individual data points (geom_point),
                       suitable for most plots with continuous x and y variables.",
                         size = "medium"
                       ),
-                      
+
                       ## input$bin2d = geom_bin2d
                       shinyWidgets::switchInput(
                         inputId = "geombin2d",
@@ -257,12 +318,12 @@ app_ui <- function(request) {
                         labelWidth = 200
                       ) |> prompter::add_prompt(
                         position = "top",
-                        message = "Display a density heatmap binning the data into 
-                      rectangles (geom_bin2d), suitable for continuous x and y 
+                        message = "Display a density heatmap binning the data into
+                      rectangles (geom_bin2d), suitable for continuous x and y
                       plots with a large number of data points.",
                         size = "medium"
                       ),
-                      
+
                       ## input$geomdensity = geom_density2d
                       shinyWidgets::switchInput(
                         inputId = "geomdensity",
@@ -276,7 +337,7 @@ app_ui <- function(request) {
                       of data points.",
                         size = "medium"
                       ),
-                      
+
                       ## input$geomdensity = geom_density2d
                       shinyWidgets::switchInput(
                         inputId = "geomdensityfilled",
@@ -285,14 +346,14 @@ app_ui <- function(request) {
                         labelWidth = 200
                       ) |> prompter::add_prompt(
                         position = "top",
-                        message = "Display a binned contour with filled bands 
-                      (geom_density2d_filled), suitable for continuous x and y plots 
+                        message = "Display a binned contour with filled bands
+                      (geom_density2d_filled), suitable for continuous x and y plots
                       with a large number of data points.",
                         size = "medium"
                       ),
-                      
+
                     ),
-                    
+
                     ## categorical x, continuous y
                     fluidRow(
                       p(strong("Categorical x, continuous y")),
@@ -304,12 +365,12 @@ app_ui <- function(request) {
                         labelWidth = 200
                       ) |> prompter::add_prompt(
                         position = "top",
-                        message = "Display a summary of the y variable using 
-                        box plots (geom_boxplot), suitable for categorical x and 
+                        message = "Display a summary of the y variable using
+                        box plots (geom_boxplot), suitable for categorical x and
                         continuous y variables.",
                         size = "medium"
                       ),
-                      
+
                       ## input$geomviolin = geom_violin
                       shinyWidgets::switchInput(
                         inputId = "geomviolin",
@@ -318,12 +379,12 @@ app_ui <- function(request) {
                         labelWidth = 200
                       ) |> prompter::add_prompt(
                         position = "top",
-                        message = "Display a summary of the y variable using 
-                        violin plots (geom_violin), suitable for categorical x and 
+                        message = "Display a summary of the y variable using
+                        violin plots (geom_violin), suitable for categorical x and
                         continuous y variables.",
                         size = "medium"
                       ),
-                      
+
                       ## input$dotplot = geom_dotplot
                       shinyWidgets::switchInput(
                         inputId = "geomdotplot",
@@ -332,13 +393,13 @@ app_ui <- function(request) {
                         labelWidth = 200
                       ) |> prompter::add_prompt(
                         position = "top",
-                        message = "Display individal y datapoints, suitable for categorical x and 
+                        message = "Display individal y datapoints, suitable for categorical x and
                         continuous y variables.",
                         size = "medium"
                       )
-                      
+
                     )
-                    
+
                   )
                 )
               ),
@@ -349,7 +410,7 @@ app_ui <- function(request) {
             )
           )
         ),
-        
+
         #### statistics ####
         column(
           width = 6,
@@ -368,16 +429,16 @@ app_ui <- function(request) {
           )
         )
       ),
-      
+
       fluidRow(
         #### data preview ####
         ## later move the data table to a better location
-        
+
         column(
           width = 6,
           reactable::reactableOutput("datatable")
         ),
-        
+
         #### tutorial/about ####
         column(
           width = 6,
@@ -399,26 +460,26 @@ app_ui <- function(request) {
           )
         )
       )
-      
+
     )
   )
-  
+
 }
 
 #' Add external Resources to the Application
-#' 
-#' This function is internally used to add external 
-#' resources inside the Shiny application. 
-#' 
+#'
+#' This function is internally used to add external
+#' resources inside the Shiny application.
+#'
 #' @import shiny
 #' @importFrom golem add_resource_path activate_js favicon bundle_resources
 #' @noRd
 golem_add_external_resources <- function(){
-  
+
   add_resource_path(
     'www', app_sys('app/www')
   )
-  
+
   tags$head(
     favicon(),
     bundle_resources(
@@ -426,7 +487,7 @@ golem_add_external_resources <- function(){
       app_title = 'canGraphR'
     )
     # Add here other external resources
-    # for example, you can add shinyalert::useShinyalert() 
+    # for example, you can add shinyalert::useShinyalert()
   )
 }
 

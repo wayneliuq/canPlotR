@@ -1,6 +1,6 @@
 #' The application server-side
-#' 
-#' @param input,output,session Internal parameters for {shiny}. 
+#'
+#' @param input,output,session Internal parameters for {shiny}.
 #'     DO NOT REMOVE.
 #' @import shiny
 #' @noRd
@@ -12,47 +12,60 @@ app_server <- function( input, output, session ) {
   # or switches to tab to select xvar and yvar
   # need to optimize script to avoid using tryCatch as it is computationally expensive
   # design the app to avoid error-causing situations
-  
+
   xvar_isnumeric <- reactive({
-    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> is.numeric()) |>  
+    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> is.numeric()) |>
       tryCatch(error = function(e) {F})
   })
-  
+
   yvar_isnumeric <- reactive({
-    {data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> is.numeric()} |> 
+    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> is.numeric()) |>
       tryCatch(error = function(e) {F})
   })
-  
+
   # error occurs when the input$x_asfactor checkbox has never been initialized
   xvar_iscategorical <- reactive({
-    (!xvar_isnumeric() | input$x_asfactor) |> 
+    (!xvar_isnumeric() | input$x_asfactor) |>
       tryCatch(error = function(e) {F})
   })
-  
+
   yvar_iscategorical <- reactive({
-    (!yvar_isnumeric() | input$y_asfactor) |> 
+    (!yvar_isnumeric() | input$y_asfactor) |>
       tryCatch(error = function(e) {F})
   })
-  
+
+  ## send it to browser to update inputs
+  output$xvar_isnumeric <- reactive(xvar_isnumeric())
+  output$yvar_isnumeric <- reactive(yvar_isnumeric())
+  output$xvar_isfactor <- reactive({xvar_iscategorical()})
+  output$yvar_isfactor <- reactive({yvar_iscategorical()})
+
+  outputOptions(output, "xvar_isnumeric", suspendWhenHidden = F)
+  outputOptions(output, "yvar_isnumeric", suspendWhenHidden = F)
+  outputOptions(output, "xvar_isfactor", suspendWhenHidden = F)
+  outputOptions(output, "yvar_isfactor", suspendWhenHidden = F)
+
   ## get the factor levels of variables
   x_factorlevels_default <- reactive({
-    data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> factor() |> levels()
+    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
   })
-  
+
   y_factorlevels_default <- reactive({
-    data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> factor() |> levels()
+    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
   })
-  
+
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
 
   final_ggplot <- reactive({
     ggplot(
-      data = data_get(), 
+      data = data_get(),
       mapping = aes(x = !!xvar_plot(),
                     y = !!yvar_plot())
     ) +
-      
+
       # custom geoms
       geomcust_bin2d() +
       geomcust_densityfilled() +
@@ -61,31 +74,31 @@ app_server <- function( input, output, session ) {
       geomcust_violin() +
       geomcust_dotplot() +
       geomcust_point() +
-      
+
       # title
       labs(title = input$plotid) +
-      
+
       #x-axis label
       xlab(input$xvar) +
-      
+
       #y-axis label
       ylab(input$yvar) +
-      
+
       # transform the x and y axis depending on user input
       x_scale_trans() +
       y_scale_trans() +
-      
+
       #theme, to be customized
       theme_bw()
   })
-  
+
   output$plot <- renderPlot(
     final_ggplot()
-  ) #|> 
+  ) #|>
   # plot only updates when button is pressed
   # remove dependency until large data testing
   # bindEvent(input$makeplot)
-  
+
   #### customize type of plot ####
   ## add UI element to choose separating data
   data_vars <- reactive({
@@ -101,7 +114,7 @@ app_server <- function( input, output, session ) {
         multiple = F,
         selected = 1
       ),
-      
+
       checkboxInput(
         inputId = "colorvar_asfactor",
         label = "Format as categorical"
@@ -109,42 +122,42 @@ app_server <- function( input, output, session ) {
         position = "right",
         size = "large",
         message = "If the selected variable consists of numbers, a continuous
-        solor scale will automatically be allowed to the plot where applicable. 
-        If you wish to format the variable as a categorical variable (factor), 
+        solor scale will automatically be allowed to the plot where applicable.
+        If you wish to format the variable as a categorical variable (factor),
         check this box. If the variable you selected is already detected as a
         categorical variable, nothing will happen."
       )
-      
+
     )
   )
 
   ## mapping depending on whether color or fill needs to be changed
-  
+
   colorvar_catch <- reactive({
     tryCatch(input$colorvar != "none", error = function(e) F)
   })
-  
+
   aes_cust_colour <- reactive({
     if (colorvar_catch()) {
       aes(colour = get(input$colorvar))
     } else {aes()}
   })
-  
+
   aes_cust_fill <- reactive({
     if (colorvar_catch()) {
       aes(fill = get(input$colorvar))
     } else {aes()}
   })
-  
+
   aes_cust_colourfill <- reactive({
     if (colorvar_catch()) {
       aes(colour = get(input$colorvar),
           fill = get(input$colorvar))
     } else {aes()}
   })
-  
+
   ## individual geom functions
-  
+
   ## continuous x & y
   geomcust_point <- reactive({
     if (input$geompoint) {
@@ -153,14 +166,14 @@ app_server <- function( input, output, session ) {
       ) #color (set color)
     }
   })
-  
+
   geomcust_bin2d <- reactive({
     if (input$geombin2d) {
-      geom_bin2d(bins = 40, 
+      geom_bin2d(bins = 40,
                  mapping = aes_cust_fill()) #fill (set fill)
-    } 
+    }
   })
-  
+
   geomcust_density <- reactive({
     if (input$geomdensity) {
       geom_density2d(
@@ -168,7 +181,7 @@ app_server <- function( input, output, session ) {
       ) #color (set color)
     }
   })
-  
+
   geomcust_densityfilled <- reactive({
     if (input$geomdensityfilled) {
       geom_density2d_filled(
@@ -176,7 +189,7 @@ app_server <- function( input, output, session ) {
       ) #fill is shading, color is border (set color? or can't set)
     }
   })
-  
+
   ## categorical x, continuous y
   geomcust_boxplot <- reactive({
     if (input$geomboxplot) {
@@ -185,18 +198,18 @@ app_server <- function( input, output, session ) {
       ) #fill is shading, color is border (set fill)
     }
   })
-  
+
   geomcust_violin <- reactive({
     if (input$geomviolin) {
       geom_violin(scale = "area",
                   mapping = aes_cust_fill()) #fill is shading, color is border (set fill)
     }
   })
-  
+
   geomcust_dotplot <- reactive({
     if (input$geomdotplot) {
       geom_dotplot(
-        binaxis = "y", 
+        binaxis = "y",
         stackdir = "center",
         binwidth = 0.01 * (max(data_get() |> select(rlang::sym(input$yvar)) |> unlist()) -
                              min(data_get() |> select(rlang::sym(input$yvar)) |> unlist())),
@@ -204,33 +217,17 @@ app_server <- function( input, output, session ) {
       ) #fill is shading, color is border (set both)
     }
   })
-  
+
   #### load data ####
-  ## file import
-  ## if user select to upload, show the upload box
-#  output$data_ui <- renderUI({
-#    if (input$input_data_type == 1) {
-#      prompter::add_prompt(
-#        fileInput(inputId = "data_user",
-#                  label = "Upload your data",
-#                  accept = c(".csv", ".txt", ".xls", ".xlsx")),
-#        position = "right",
-#        message = "Supported filetypes include 'xls', 'xlsx', 'csv', and 'txt'. By default, only the first sheet of Excel spreadsheets will be loaded.",
-#        size = "large"
-#      )
-#      
-#    } else if (input$input_data_type == 2) {
-#      renderText("Example dose-response data loaded.")
-#    }
-#  })
-  
+
   ## get the real data
+  ## data is bound to button since reading data can be slow
   data_get <- reactive({
-    ## later fix so no data won't generate error in reactable output
-    ## user uploaded data
+
     if (input$input_data_type == 1) {
-      
+
       ## find the file type of the user uploaded data
+
       if (tools::file_ext(input$data_user$datapath) == "xls") {
         readxl::read_xls(input$data_user$datapath)
       } else if (tools::file_ext(input$data_user$datapath) == "xlsx") {
@@ -238,27 +235,24 @@ app_server <- function( input, output, session ) {
       } else if (tools::file_ext(input$data_user$datapath) %in% c("txt", "csv")) {
         readr::read_delim(input$data_user$datapath)
       }
-      
+
     } else if (input$input_data_type == 2) {
       data("example_dr", envir = environment()); example_dr
     } else {
-      tibble(A = 0, B = 0)
+        tibble()
     }
-  })
-  
-  ## to send to UI
-  # https://shiny.rstudio.com/articles/dynamic-ui.html
-  output$data <- reactive({data_get()})
-  
+  }) |>
+    bindEvent(input$data_load)
+
   #### summarise data ####
   ## later modify group_by so it incorporates facets, and mappings e.g. (color/fill)
   data_summary <- reactive({
-    
+
     if (
-      (xvar_iscategorical() & !yvar_iscategorical()) |> 
+      (xvar_iscategorical() & !yvar_iscategorical()) |>
       tryCatch(error = function(e) F)
     ) {
-      data_get() |> 
+      data_get() |>
         group_by("x" = get(input$xvar)) |> ## need to fix so summary displays the x variable name
         summarise(
           count = n(),
@@ -275,7 +269,7 @@ app_server <- function( input, output, session ) {
     }
 
   })
-  
+
   output$datasummary <- reactable::renderReactable({
     reactable::reactable(data_summary(),
                          showPageSizeOptions = T,
@@ -283,7 +277,7 @@ app_server <- function( input, output, session ) {
                          resizable = T,
                          defaultPageSize = 10)
   })
-  
+
   #### show data table preview ####
   output$datatable <- reactable::renderReactable({
     reactable::reactable(data_get(),
@@ -292,30 +286,29 @@ app_server <- function( input, output, session ) {
                          resizable = T,
                          defaultPageSize = 10)
   })
-  
-  #### choose columns ####
 
-  ## choose x and y
-  output$chooseX <- renderUI({
-    varSelectInput(inputId = "xvar",
-                label = "Choose x variable",
-                data = data_get(),
-                selectize = F,
-                size = 4)
-  })
-  
-  output$chooseY <- renderUI({
-    varSelectInput(inputId = "yvar",
-                   label = "Choose y variable",
-                   data = data_get(),
-                   selectize = F,
-                   size = 4)
-  })
-  
+  #### update UI for choose columns ####
+
+  ## update column selection w
+  ## consider binding it (bindEvent) if there are issues
+  observe({
+    if (tryCatch(is.character(data_vars()), error = function(e) F)) {
+      updateSelectInput(session,
+                        inputId = "xvar",
+                        choices = data_vars(),
+                        selected = 1)
+
+      updateSelectInput(session,
+                        inputId = "yvar",
+                        choices = data_vars(),
+                        selected = 1)
+            }
+    })
+
   #### format x or y as factors ####
- 
+
   ## function for ggplot mapping as factors
-  
+
   ## catch error if xorder and yorder is not initialized
   ## this is only thought to occur before the user clicked the dropdown menu
   xorder_catch <- reactive({
@@ -325,7 +318,7 @@ app_server <- function( input, output, session ) {
       x_factorlevels_default()
     }) |> tryCatch(error = function(e) x_factorlevels_default())
   })
-  
+
   yorder_catch <- reactive({
     (if (identical(length(input$yorder), length(y_factorlevels_default()))) {
       input$yorder
@@ -333,8 +326,8 @@ app_server <- function( input, output, session ) {
       y_factorlevels_default()
     }) |> tryCatch(error = function(e) y_factorlevels_default())
   })
-  
-  
+
+
   ## format x and y variables as ggplot mapping objects
   ## separate input$xvar and input$yvar for later greater modularity (e.g. adding mappings)
   # If your wrapper has a more specific interface with named arguments,
@@ -342,9 +335,9 @@ app_server <- function( input, output, session ) {
   # scatter_by <- function(data, x, y) {
   #   x <- enquo(x)
   #   y <- enquo(y)
-  #   
+  #
   #   ggplot(data) + geom_point(aes(!!x, !!y))
-  
+
   xvar_plot <- reactive({
     (if (xvar_iscategorical()) {
       factor(
@@ -355,7 +348,7 @@ app_server <- function( input, output, session ) {
       get(input$xvar) |> expr()
     })
   })
-  
+
   yvar_plot <- reactive({
     (if (yvar_iscategorical()) {
       factor(
@@ -366,14 +359,14 @@ app_server <- function( input, output, session ) {
       get(input$yvar) |> expr()
     })
   })
-  
+
   #### numeric variable transformation ####
-  # allow the user to set the scale transformation for 
+  # allow the user to set the scale transformation for
   # numeric x and y
-  
+
   # TO BE IMPLEMENTED: check for variable type to determine which
   # transformations will succeed
-  
+
   # this is copied from app_ui, maybe need to find a way to pull list directly from app_ui.R
   trans_continuous <- c(
     "none" = "identity",
@@ -389,25 +382,25 @@ app_server <- function( input, output, session ) {
     "time hms" = "hms",
     "time POSIX" = "time"
   )
-  
+
   x_scale_trans <- reactive({
     if (!xvar_iscategorical()) {
       scale_x_continuous(trans = input$xtrans)
     }
   })
-  
+
   y_scale_trans <- reactive({
     if (!yvar_iscategorical()) {
       scale_y_continuous(trans = input$ytrans)
     }
   })
-  
+
   ## if variable is factor, do not allow selection of transformation
   ## or user will be confused
   ## fixes are needed here, cannot apply transformation to numeric values
   observe({
     disabled_choices <- trans_continuous != "identity"
-    
+
     if (xvar_iscategorical()) {
       shinyWidgets::updatePickerInput(
         session = session,
@@ -417,7 +410,7 @@ app_server <- function( input, output, session ) {
                           style = ifelse(disabled_choices,
                                          yes = "color: rgba(119, 119, 119, 0.5);",
                                          no = ""))
-        
+
       )
     } else {
       shinyWidgets::updatePickerInput(
@@ -426,7 +419,7 @@ app_server <- function( input, output, session ) {
         choices = trans_continuous
       )
     }
-    
+
     if (yvar_iscategorical()) {
       shinyWidgets::updatePickerInput(
         session = session,
@@ -436,7 +429,7 @@ app_server <- function( input, output, session ) {
                           style = ifelse(disabled_choices,
                                          yes = "color: rgba(119, 119, 119, 0.5);",
                                          no = ""))
-        
+
       )
     } else {
       shinyWidgets::updatePickerInput(
@@ -447,53 +440,35 @@ app_server <- function( input, output, session ) {
     }
   })
 
-  #### reorder x and y variable ui ####
-  output$orderX <- renderUI({
-    if (xvar_iscategorical()) {
-      shinyWidgets::dropdown(
-        status = "primary",
-        label = "re-order x-variable",
-        sortable::rank_list(
-          text = "Category order",
-          labels = x_factorlevels_default(),
-          input_id = "xorder",
-          options = sortable::sortable_options(multiDrag = T)
-        )
-      )
-    } 
-  })
-  
-  output$orderY <- renderUI({
-    if (yvar_iscategorical()) {
-      shinyWidgets::dropdown(
-        status = "primary",
-        label = "re-order y-variable",
-        sortable::rank_list(
-          text = "Category order",
-          labels = y_factorlevels_default(),
-          input_id = "yorder",
-          options = sortable::sortable_options(multiDrag = T)
-        )
-      )
-    }
+  #### reorder x and y factor levels ####
+
+  observe({
+          shinyjqui::updateOrderInput(
+            session,
+            inputId = "xorder",
+            items = x_factorlevels_default()
+          )
+
+          shinyjqui::updateOrderInput(
+            session,
+            inputId = "yorder",
+            items = y_factorlevels_default()
+          )
   })
 
   #### debug console ####
   output$debug <- renderText({
     data_summary() |> print()
   })
-  
-  #### output options ####
-  outputOptions(output, "data", suspendWhenHidden = FALSE)
-  
+
   #### session end scripts ####
   # session$onSessionEnded(function() {
-  # 
+  #
   #   ## remove uploaded data
   #   if (!is.null(input$data_user)) {
   #     file.remove(input$data_user$datapath)
   #   }
-  # 
+  #
   #   ## remove temporary files
   #   if (dir.exists(tempdir())) {
   #     unlink(tempdir(), recursive = T)
