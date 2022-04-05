@@ -228,32 +228,50 @@ app_ui <- function(request) {
                   )
                 )
               ),
-              
+
               tabPanel(
-                title = "2. Color Data",
-                shinyWidgets::pickerInput(
-                  inputId = "colorvar",
-                  label = "Select a variable to color the data:",
-                  choices = "none",
-                  multiple = F,
-                  selected = 1
-                ),
-                
-                checkboxInput(
-                  inputId = "colorvar_asfactor",
-                  label = "Format as categorical"
-                ) |> prompter::add_prompt(
-                  position = "right",
-                  size = "large",
-                  message = "If the selected variable consists of numbers, a continuous
-					color scale will automatically be allowed to the plot where applicable.
-					If you wish to format the variable as a categorical variable (factor),
-					check this box. If the variable you selected is already detected as a
-					categorical variable, nothing will happen."
+                title = "2. Group and Split Data",
+
+                fluidRow(
+
+                  ## split by color (factor)
+
+                  p(strong("Group data by color")),
+
+                  p("Group your data by a variable, which will be coerced to a
+                  categorical variable. Some plots, such as filled density plots,
+                  cannot be grouped."),
+
+                  shinyWidgets::pickerInput(
+                    inputId = "color_factor_var",
+                    label = NULL,
+                    choices = "none",
+                    multiple = F,
+                    selected = 1
+                  ),
+
+                  conditionalPanel(
+                    condition = "input.color_factor_var !== 'none'",
+                    shinyWidgets::dropdown(
+                      status = "primary",
+                      label = "re-order grouping variable",
+                      shinyjqui::orderInput(
+                        inputId = "color_factor_var_order",
+                        label = NULL,
+                        items = c("NA"),
+                        item_class = "primary"
+                      )
+                    ) |> prompter::add_prompt(
+                      position = "right",
+                      size = "large",
+                      message = "You can re-order the grouping variable by clicking
+                      this dropdown and dragging the items to the desired order."
+                    )
+                  )
                 )
-                
+
               ),
-              
+
               tabPanel(
                 title = "3. NA",
 
@@ -377,7 +395,7 @@ app_ui <- function(request) {
 
                     ## categorical x, continuous y
                     fluidRow(
-                    
+
                       p(strong("Categorical x, continuous y")),
                       ## input$geomboxplot = geom_boxplot
                       shinyWidgets::switchInput(
@@ -421,12 +439,12 @@ app_ui <- function(request) {
                       )
 
                     ),
-                    
+
                     ## categorical x & y
                     fluidRow(
-                      
+
                       p(strong("Categorical x & y")),
-                      
+
                       shinyWidgets::switchInput(
                         inputId = "geomcount",
                         label = "counts plot",
@@ -438,15 +456,32 @@ app_ui <- function(request) {
                         categorical x and y variables.",
                         size = "medium"
                       )
-                      
+
                     )
 
                   )
                 )
               ),
               tabPanel(
-                title = "apperance 2",
-                "appearance 2"
+                title = "Plot Appearance",
+
+                ## color data points with continuous variables
+                fluidRow(
+
+                  p(strong("Color with continuous variables")),
+
+                  p("Colour your data points with a continuous variable from your
+                    data. This will only show on plot types with points (e.g.
+                    point plots and dot plots). If you've already selected a
+                    grouping color variable, nothing will show."),
+
+                  shinyWidgets::pickerInput(
+                    inputId = "color_numeric_var",
+                    label = NULL,
+                    choices = "none",
+                    selected = 1
+                  )
+                )
               )
             )
           )

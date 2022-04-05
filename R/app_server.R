@@ -5,56 +5,6 @@
 #' @import shiny
 #' @noRd
 app_server <- function( input, output, session ) {
-  #### common functions ####
-
-  ## check whether variables are numeric
-  # error occurs before input$xvar is initialized, e.g. before user loads data
-  # or switches to tab to select xvar and yvar
-  # need to optimize script to avoid using tryCatch as it is computationally expensive
-  # design the app to avoid error-causing situations
-
-  xvar_isnumeric <- reactive({
-    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> is.numeric()) |>
-      tryCatch(error = function(e) {F})
-  })
-
-  yvar_isnumeric <- reactive({
-    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> is.numeric()) |>
-      tryCatch(error = function(e) {F})
-  })
-
-  # error occurs when the input$x_asfactor checkbox has never been initialized
-  xvar_iscategorical <- reactive({
-    (!xvar_isnumeric() | input$x_asfactor) |>
-      tryCatch(error = function(e) {F})
-  })
-
-  yvar_iscategorical <- reactive({
-    (!yvar_isnumeric() | input$y_asfactor) |>
-      tryCatch(error = function(e) {F})
-  })
-
-  ## send it to browser to update inputs
-  output$xvar_isnumeric <- reactive(xvar_isnumeric())
-  output$yvar_isnumeric <- reactive(yvar_isnumeric())
-  output$xvar_isfactor <- reactive({xvar_iscategorical()})
-  output$yvar_isfactor <- reactive({yvar_iscategorical()})
-
-  outputOptions(output, "xvar_isnumeric", suspendWhenHidden = F)
-  outputOptions(output, "yvar_isnumeric", suspendWhenHidden = F)
-  outputOptions(output, "xvar_isfactor", suspendWhenHidden = F)
-  outputOptions(output, "yvar_isfactor", suspendWhenHidden = F)
-
-  ## get the factor levels of variables
-  x_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
-  })
-
-  y_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
-  })
 
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
@@ -101,42 +51,46 @@ app_server <- function( input, output, session ) {
   # bindEvent(input$makeplot)
 
   #### customize type of plot ####
-  ## add UI element to choose separating data
-  data_vars <- reactive({
-    (data_get() |> colnames()) |>
-      tryCatch(error = function(e) character(0))
-  })
-  
-  observe({
-    shinyWidgets::updatePickerInput(
-      session,
-      inputId = "colorvar",
-      choices = c("none", data_vars())
-    )
-  }) |> bindEvent(data_vars())
-
   ## mapping depending on whether color or fill needs to be changed
 
   colorvar_catch <- reactive({
-    tryCatch(input$colorvar != "none", error = function(e) F)
+    if (isTruthy(input$color_factor_var) & isTruthy(input$color_numeric_var) |>
+      tryCatch(error = function(e) F)) {
+        if (input$color_factor_var == "none" & input$color_numeric_var == "none") {
+          F
+        } else {T}
+      }
   })
 
   aes_cust_colour <- reactive({
     if (colorvar_catch()) {
-      aes(colour = get(input$colorvar))
+      if (input$color_factor_var == "none") {
+        aes(colour = get(input$color_numeric_var))
+      } else {
+        aes(colour = factor(get(input$color_factor_var)))
+      }
     } else {aes()}
   })
 
   aes_cust_fill <- reactive({
     if (colorvar_catch()) {
-      aes(fill = get(input$colorvar))
+      if (input$color_factor_var == "none") {
+        aes(fill = get(input$color_numeric_var))
+      } else {
+        aes(fill = factor(get(input$color_factor_var)))
+      }
     } else {aes()}
   })
 
   aes_cust_colourfill <- reactive({
     if (colorvar_catch()) {
-      aes(colour = get(input$colorvar),
-          fill = get(input$colorvar))
+      if (input$color_factor_var == "none") {
+        aes(colour = get(input$color_numeric_var),
+            fill = get(input$color_numeric_var))
+      } else {
+        aes(colour = factor(get(input$color_factor_var)),
+            fill = factor(get(input$color_factor_var)))
+      }
     } else {aes()}
   })
 
@@ -169,8 +123,8 @@ app_server <- function( input, output, session ) {
   geomcust_densityfilled <- reactive({
     if (input$geomdensityfilled) {
       geom_density2d_filled(
-        mapping = aes_cust_colour()
-      ) #fill is shading, color is border (set color? or can't set)
+        mapping = aes()
+      ) #this plot cannot be colored/grouped
     }
   })
 
@@ -213,7 +167,7 @@ app_server <- function( input, output, session ) {
       )
     }
   })
-  
+
   #### load data ####
 
   ## get the real data
@@ -285,10 +239,86 @@ app_server <- function( input, output, session ) {
                          defaultPageSize = 10)
   })
 
-  #### update UI for choose columns ####
+  #### check whether variables are numeric ####
+  # error occurs before input$xvar is initialized, e.g. before user loads data
+  # or switches to tab to select xvar and yvar
+  # need to optimize script to avoid using tryCatch as it is computationally expensive
 
-  ## update column selection w
-  ## consider binding it (bindEvent) if there are issues
+  xvar_isnumeric <- reactive({
+    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> is.numeric()) |>
+      tryCatch(error = function(e) {F})
+  })
+
+  yvar_isnumeric <- reactive({
+    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> is.numeric()) |>
+      tryCatch(error = function(e) {F})
+  })
+
+  xvar_iscategorical <- reactive({
+    !xvar_isnumeric() | input$x_asfactor
+  })
+
+  yvar_iscategorical <- reactive({
+    !yvar_isnumeric() | input$y_asfactor
+  })
+
+  ## send it to browser to update inputs
+  output$xvar_isnumeric <- reactive(xvar_isnumeric())
+  output$yvar_isnumeric <- reactive(yvar_isnumeric())
+  output$xvar_isfactor <- reactive({xvar_iscategorical()})
+  output$yvar_isfactor <- reactive({yvar_iscategorical()})
+
+  outputOptions(output, "xvar_isnumeric", suspendWhenHidden = F)
+  outputOptions(output, "yvar_isnumeric", suspendWhenHidden = F)
+  outputOptions(output, "xvar_isfactor", suspendWhenHidden = F)
+  outputOptions(output, "yvar_isfactor", suspendWhenHidden = F)
+
+
+  #### get the factor levels of variables ####
+  x_factorlevels_default <- reactive({
+    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
+  })
+
+  y_factorlevels_default <- reactive({
+    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
+  })
+
+
+  #### update UI for coloring/stratifying data ####
+
+  ## add UI element to choose separating data
+  data_vars <- reactive({
+    (data_get() |> colnames()) |>
+      tryCatch(error = function(e) character(0))
+  })
+
+  ## separate numeric variables
+  ## or else it will be too confusing for users, coloring vs splitting data
+
+  data_vars_numeric <- reactive({
+    data_get() |> select(where(is.numeric)) |> colnames() |>
+      tryCatch(error = function(e) character(0))
+  })
+
+  observe({
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "color_factor_var",
+      choices = c("none", data_vars())
+    )
+
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "color_numeric_var",
+      choices = c("none", data_vars_numeric())
+    )
+  }) |> bindEvent(data_vars())
+
+
+  #### update column selection ####
+  # bind it to data load button to increase efficiency
   observe({
     if (tryCatch(is.character(data_vars()), error = function(e) F)) {
       updateSelectInput(session,
@@ -303,7 +333,7 @@ app_server <- function( input, output, session ) {
             }
     }) |> bindEvent(input$data_load)
 
-  #### format x or y as factors ####
+  #### format x or y as factors and choose order ####
 
   ## function for ggplot mapping as factors
   xorder_catch <- reactive({
