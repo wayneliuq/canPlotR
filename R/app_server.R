@@ -27,7 +27,9 @@ app_server <- function( input, output, session ) {
       geomcust_count() +
 
       # title
-      labs(title = input$plotid) +
+      labs(title = input$plotid,
+           fill = legend_lab(),
+           color = legend_lab()) +
 
       #x-axis label
       xlab(input$xvar) +
@@ -39,16 +41,24 @@ app_server <- function( input, output, session ) {
       x_scale_trans() +
       y_scale_trans() +
 
+      # facets
+      facet_cust()+
+
       #theme, to be customized
       theme_bw()
   })
 
   output$plot <- renderPlot(
     final_ggplot()
-  ) #|>
-  # plot only updates when button is pressed
-  # remove dependency until large data testing
-  # bindEvent(input$makeplot)
+  )
+
+  #### misc labels ####
+  ## legend titles
+  # automatically take the column title
+  # planned feature: allow user to customize it
+  legend_lab <- reactive({
+    first(c(input$color_factor_var, input$color_numeric_var))
+  })
 
   #### customize type of plot ####
   ## mapping depending on whether color or fill needs to be changed
@@ -62,12 +72,20 @@ app_server <- function( input, output, session ) {
       }
   })
 
+  colorvar_levels <- reactive({
+    if (isTruthy(input$color_factor_var_order)) {
+      input$color_factor_var_order
+    } else {
+      color_factorlevels_default()
+    }
+  })
+
   aes_cust_colour <- reactive({
     if (colorvar_catch()) {
       if (input$color_factor_var == "none") {
         aes(colour = get(input$color_numeric_var))
       } else {
-        aes(colour = factor(get(input$color_factor_var)))
+        aes(colour = factor(get(input$color_factor_var), levels = colorvar_levels()))
       }
     } else {aes()}
   })
@@ -77,7 +95,7 @@ app_server <- function( input, output, session ) {
       if (input$color_factor_var == "none") {
         aes(fill = get(input$color_numeric_var))
       } else {
-        aes(fill = factor(get(input$color_factor_var)))
+        aes(fill = factor(get(input$color_factor_var), levels = colorvar_levels()))
       }
     } else {aes()}
   })
@@ -88,8 +106,8 @@ app_server <- function( input, output, session ) {
         aes(colour = get(input$color_numeric_var),
             fill = get(input$color_numeric_var))
       } else {
-        aes(colour = factor(get(input$color_factor_var)),
-            fill = factor(get(input$color_factor_var)))
+        aes(colour = factor(get(input$color_factor_var), levels = colorvar_levels()),
+            fill = factor(get(input$color_factor_var), levels = colorvar_levels()))
       }
     } else {aes()}
   })
@@ -154,7 +172,7 @@ app_server <- function( input, output, session ) {
         binwidth = 0.01 * (max(data_get() |> select(rlang::sym(input$yvar)) |> unlist()) -
                              min(data_get() |> select(rlang::sym(input$yvar)) |> unlist())),
         mapping = aes_cust_colourfill(),
-        position = position_dodge(0.88)
+        position = position_dodge(0.85)
       ) #fill is shading, color is border (set both)
     }
   })
@@ -163,9 +181,36 @@ app_server <- function( input, output, session ) {
     if (input$geomcount) {
       geom_count(
         mapping = aes_cust_colourfill(),
-        position = position_dodge(0.88)
+        position = position_dodge(0.85)
       )
     }
+  })
+
+  #### faceting data by user ####
+  ## only facet_grid is planned to be supported
+
+  facet_hvar_catch <- reactive({
+    if (isTruthy(input$facet_hvar) |> tryCatch(error = function(e) F)) {
+      if (input$facet_hvar != "none") {
+        input$facet_hvar |> get() |> vars()
+      } else {NULL}
+    } else {NULL}
+  })
+
+  facet_vvar_catch <- reactive({
+    if (isTruthy(input$facet_vvar) |> tryCatch(error = function(e) F)) {
+      if (input$facet_vvar != "none") {
+        input$facet_vvar |> get() |> vars()
+      } else {NULL}
+    } else {NULL}
+  })
+
+  facet_cust <- reactive({
+    facet_grid(
+      cols = facet_hvar_catch(),
+      rows = facet_vvar_catch(),
+      scales = "fixed"
+    )
   })
 
   #### load data ####
@@ -285,8 +330,12 @@ app_server <- function( input, output, session ) {
       tryCatch(error = function(e) "NA")
   })
 
+  color_factorlevels_default <- reactive({
+    (data_get() |> select(rlang::sym(input$color_factor_var)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
+  })
 
-  #### update UI for coloring/stratifying data ####
+  #### update UI for coloring/splitting data ####
 
   ## add UI element to choose separating data
   data_vars <- reactive({
@@ -314,6 +363,19 @@ app_server <- function( input, output, session ) {
       inputId = "color_numeric_var",
       choices = c("none", data_vars_numeric())
     )
+
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "facet_hvar",
+      choices = c("none", data_vars())
+    )
+
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "facet_vvar",
+      choices = c("none", data_vars())
+    )
+
   }) |> bindEvent(data_vars())
 
 
@@ -464,7 +526,7 @@ app_server <- function( input, output, session ) {
     }
   })
 
-  #### reorder x and y factor levels ####
+  #### reorder factor levels observer ####
 
   observe({
           shinyjqui::updateOrderInput(
@@ -478,7 +540,13 @@ app_server <- function( input, output, session ) {
             inputId = "yorder",
             items = y_factorlevels_default()
           )
-  })
+
+          shinyjqui::updateOrderInput(
+            session,
+            inputId = "color_factor_var_order",
+            items = color_factorlevels_default()
+          )
+  }) |> bindEvent(input$xvar, input$yvar, input$color_factor_var)
 
   #### debug console ####
   output$debug <- renderText({

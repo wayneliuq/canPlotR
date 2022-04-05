@@ -232,10 +232,9 @@ app_ui <- function(request) {
               tabPanel(
                 title = "2. Group and Split Data",
 
+                ## split by color (factor)
+
                 fluidRow(
-
-                  ## split by color (factor)
-
                   p(strong("Group data by color")),
 
                   p("Group your data by a variable, which will be coerced to a
@@ -267,6 +266,40 @@ app_ui <- function(request) {
                       message = "You can re-order the grouping variable by clicking
                       this dropdown and dragging the items to the desired order."
                     )
+                  )
+                ),
+
+                ## split by facet
+
+                fluidRow(
+
+                  p(strong("Split plot")),
+
+                  p("Split your data into panels (facets) by categorical
+                  variables. Numeric variables will be coerced to categories."),
+
+                  column(
+                    width = 6,
+                    p(em("horizontal split")),
+
+                    shinyWidgets::pickerInput(
+                      inputId = "facet_hvar",
+                      choices = "none",
+                      selected = 1
+                    )
+
+                  ),
+
+                  column(
+                    width = 6,
+                    p(em("vertical split")),
+
+                      shinyWidgets::pickerInput(
+                        inputId = "facet_vvar",
+                        choices = "none",
+                        selected = 1
+                      )
+
                   )
                 )
 
