@@ -49,7 +49,35 @@ app_server <- function( input, output, session ) {
   })
 
   output$plot <- renderPlot(
-    final_ggplot()
+    final_ggplot(),
+    res = 72,
+    alt = "Drag the bottom right corner to resize the plot"
+  )
+
+  #### download ggplot handler ####
+  output$plot_download <- downloadHandler(
+    filename = function() {
+      paste0(
+        Sys.Date(),
+        "_",
+        input$plotid,
+        ".",
+        input$export_filetype
+      )
+    },
+
+    content = function(file) {
+      ggsave(
+        filename = file,
+        plot = final_ggplot(),
+        device = input$export_filetype,
+        scale = 1,
+        width = input$plot_size[[1]], # calculate from dpi later
+        height = input$plot_size[[2]],
+        units = "px",
+        dpi = as.integer(input$export_resolution)
+      )
+    }
   )
 
   #### misc labels ####
@@ -602,7 +630,9 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderText({
-    data_summary() |> print()
+
+    input$plot_size |> unlist()
+
   })
 
   #### session end scripts ####
