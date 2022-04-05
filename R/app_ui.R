@@ -377,6 +377,43 @@ app_ui <- function(request) {
           fluidRow(
             plotOutput("plot") |>
               shinyjqui::jqui_resizable()
+          ),
+
+
+          ## export dropdown menu
+          fluidRow(
+            shinyWidgets::dropdown(
+              label = "Export Figure",
+
+              ## export resolution
+              shinyWidgets::pickerInput(
+                inputId = "export_filetype",
+                label = "Filetype",
+                choices = c("png", "pdf"), # can expand to more filetypes supported by ggsave
+                selected = 1
+              ),
+
+              ## export size
+              shinyWidgets::sliderTextInput(
+                inputId = "export_resolution",
+                label = "Resolution",
+                choices = c(36, 72, 100, 200, 300, 600),
+                selected = "72"
+              ) |> prompter::add_prompt(
+                size = "medium",
+                position = "right",
+                message = "Select the desired resolution (pixels per inch) of
+                the exported figure."
+              ),
+
+              ## download button
+              downloadButton(
+                "plot_download",
+                label = "Export plot",
+                class = "btn-success"
+              )
+
+            )
           )
         )
 
