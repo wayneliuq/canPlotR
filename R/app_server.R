@@ -189,10 +189,31 @@ app_server <- function( input, output, session ) {
   #### faceting data by user ####
   ## only facet_grid is planned to be supported
 
+  ## get custom levels
+  facet_hvar_levels <- reactive({
+    if (isTruthy(input$facet_hvar_order)) {
+      input$facet_hvar_order
+    } else {
+      facet_h_factorlevels_default()
+    }
+  })
+
+  facet_vvar_levels <- reactive({
+    if (isTruthy(input$facet_vvar_order)) {
+      input$facet_vvar_order
+    } else {
+      facet_v_factorlevels_default()
+    }
+  })
+
+  ## make facet_cust function
   facet_hvar_catch <- reactive({
     if (isTruthy(input$facet_hvar) |> tryCatch(error = function(e) F)) {
       if (input$facet_hvar != "none") {
-        input$facet_hvar |> get() |> vars()
+        input$facet_hvar |>
+          get() |>
+          factor(levels = facet_hvar_levels()) |>
+          vars()
       } else {NULL}
     } else {NULL}
   })
@@ -200,7 +221,10 @@ app_server <- function( input, output, session ) {
   facet_vvar_catch <- reactive({
     if (isTruthy(input$facet_vvar) |> tryCatch(error = function(e) F)) {
       if (input$facet_vvar != "none") {
-        input$facet_vvar |> get() |> vars()
+        input$facet_vvar |>
+          get() |>
+          factor(levels = facet_vvar_levels()) |>
+          vars()
       } else {NULL}
     } else {NULL}
   })
@@ -317,23 +341,6 @@ app_server <- function( input, output, session ) {
   outputOptions(output, "yvar_isnumeric", suspendWhenHidden = F)
   outputOptions(output, "xvar_isfactor", suspendWhenHidden = F)
   outputOptions(output, "yvar_isfactor", suspendWhenHidden = F)
-
-
-  #### get the factor levels of variables ####
-  x_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
-  })
-
-  y_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
-  })
-
-  color_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$color_factor_var)) |> unlist() |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
-  })
 
   #### update UI for coloring/splitting data ####
 
@@ -526,6 +533,31 @@ app_server <- function( input, output, session ) {
     }
   })
 
+  #### get the factor levels of variables ####
+  x_factorlevels_default <- reactive({
+    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
+  })
+
+  y_factorlevels_default <- reactive({
+    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
+  })
+
+  color_factorlevels_default <- reactive({
+    (data_get() |> select(rlang::sym(input$color_factor_var)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
+  })
+
+  facet_h_factorlevels_default <- reactive({
+    (data_get() |> select(rlang::sym(input$facet_hvar)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
+  })
+
+  facet_v_factorlevels_default <- reactive({
+    (data_get() |> select(rlang::sym(input$facet_vvar)) |> unlist() |> factor() |> levels()) |>
+      tryCatch(error = function(e) "NA")
+  })
   #### reorder factor levels observer ####
 
   observe({
@@ -534,19 +566,39 @@ app_server <- function( input, output, session ) {
             inputId = "xorder",
             items = x_factorlevels_default()
           )
+  }) |> bindEvent(input$xvar)
 
-          shinyjqui::updateOrderInput(
-            session,
-            inputId = "yorder",
-            items = y_factorlevels_default()
-          )
+  observe({
+    shinyjqui::updateOrderInput(
+      session,
+      inputId = "yorder",
+      items = y_factorlevels_default()
+    )
+  }) |> bindEvent(input$yvar)
 
-          shinyjqui::updateOrderInput(
-            session,
-            inputId = "color_factor_var_order",
-            items = color_factorlevels_default()
-          )
-  }) |> bindEvent(input$xvar, input$yvar, input$color_factor_var)
+  observe({
+    shinyjqui::updateOrderInput(
+      session,
+      inputId = "color_factor_var_order",
+      items = color_factorlevels_default()
+    )
+  }) |> bindEvent(input$color_factor_var)
+
+  observe({
+    shinyjqui::updateOrderInput(
+      session,
+      inputId = "facet_hvar_order",
+      items = facet_h_factorlevels_default()
+    )
+  }) |> bindEvent(input$facet_hvar)
+
+  observe({
+    shinyjqui::updateOrderInput(
+      session,
+      inputId = "facet_vvar_order",
+      items =facet_v_factorlevels_default()
+    )
+  }) |> bindEvent(input$facet_vvar)
 
   #### debug console ####
   output$debug <- renderText({

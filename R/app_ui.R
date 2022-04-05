@@ -263,8 +263,8 @@ app_ui <- function(request) {
                     ) |> prompter::add_prompt(
                       position = "right",
                       size = "large",
-                      message = "You can re-order the grouping variable by clicking
-                      this dropdown and dragging the items to the desired order."
+                      message = "You can re-order the grouping variable by opening
+                      this dropdown menu and dragging the items to the desired order."
                     )
                   )
                 ),
@@ -280,25 +280,63 @@ app_ui <- function(request) {
 
                   column(
                     width = 6,
-                    p(em("horizontal split")),
+                    p(em("horizontal split (columns)")),
 
                     shinyWidgets::pickerInput(
                       inputId = "facet_hvar",
                       choices = "none",
                       selected = 1
+                    ),
+
+                    conditionalPanel(
+                      condition = "input.facet_hvar !== 'none'",
+                      shinyWidgets::dropdown(
+                        status = "primary",
+                        label = "re-order horizontal panels",
+                        size = "sm",
+                        shinyjqui::orderInput(
+                          inputId = "facet_hvar_order",
+                          items = "NA",
+                          label = NULL
+                        )
+                      ) |> prompter::add_prompt(
+                        position = "right",
+                        size = "large",
+                        message = "You can re-order the horizontal panel by opening
+                        this dropdown menu and dragging the items to the desired order."
+                      )
                     )
 
                   ),
 
                   column(
                     width = 6,
-                    p(em("vertical split")),
+                    p(em("vertical split (rows)")),
 
-                      shinyWidgets::pickerInput(
-                        inputId = "facet_vvar",
-                        choices = "none",
-                        selected = 1
+                    shinyWidgets::pickerInput(
+                      inputId = "facet_vvar",
+                      choices = "none",
+                      selected = 1
+                    ),
+
+                    conditionalPanel(
+                      condition = "input.facet_vvar !== 'none'",
+                      shinyWidgets::dropdown(
+                        status = "primary",
+                        label = "re-order vertical panels",
+                        size = "sm",
+                        shinyjqui::orderInput(
+                          inputId = "facet_vvar_order",
+                          items = "NA",
+                          label = NULL
+                        )
+                      ) |> prompter::add_prompt(
+                        position = "right",
+                        size = "large",
+                        message = "You can re-order the vertical panel by opening
+                        this dropdown menu and dragging the items to the desired order."
                       )
+                    )
 
                   )
                 )
