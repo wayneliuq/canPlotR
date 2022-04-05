@@ -74,6 +74,7 @@ app_server <- function( input, output, session ) {
       geomcust_violin() +
       geomcust_dotplot() +
       geomcust_point() +
+      geomcust_count() +
 
       # title
       labs(title = input$plotid) +
@@ -102,34 +103,17 @@ app_server <- function( input, output, session ) {
   #### customize type of plot ####
   ## add UI element to choose separating data
   data_vars <- reactive({
-    data_get() |> colnames()
+    (data_get() |> colnames()) |>
+      tryCatch(error = function(e) character(0))
   })
-
-  output$color_var <- renderUI(
-    fluidRow(
-      shinyWidgets::pickerInput(
-        inputId = "colorvar",
-        label = "Select a variable to color the data:",
-        choices = c("none", data_vars()),
-        multiple = F,
-        selected = 1
-      ),
-
-      checkboxInput(
-        inputId = "colorvar_asfactor",
-        label = "Format as categorical"
-      ) |> prompter::add_prompt(
-        position = "right",
-        size = "large",
-        message = "If the selected variable consists of numbers, a continuous
-        solor scale will automatically be allowed to the plot where applicable.
-        If you wish to format the variable as a categorical variable (factor),
-        check this box. If the variable you selected is already detected as a
-        categorical variable, nothing will happen."
-      )
-
+  
+  observe({
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "colorvar",
+      choices = c("none", data_vars())
     )
-  )
+  }) |> bindEvent(data_vars())
 
   ## mapping depending on whether color or fill needs to be changed
 
@@ -194,7 +178,8 @@ app_server <- function( input, output, session ) {
   geomcust_boxplot <- reactive({
     if (input$geomboxplot) {
       geom_boxplot(
-        mapping = aes_cust_fill()
+        mapping = aes_cust_fill(),
+        alpha = 0.5
       ) #fill is shading, color is border (set fill)
     }
   })
@@ -202,7 +187,8 @@ app_server <- function( input, output, session ) {
   geomcust_violin <- reactive({
     if (input$geomviolin) {
       geom_violin(scale = "area",
-                  mapping = aes_cust_fill()) #fill is shading, color is border (set fill)
+                  mapping = aes_cust_fill(),
+                  alpha = 0.5) #fill is shading, color is border (set fill)
     }
   })
 
@@ -213,11 +199,21 @@ app_server <- function( input, output, session ) {
         stackdir = "center",
         binwidth = 0.01 * (max(data_get() |> select(rlang::sym(input$yvar)) |> unlist()) -
                              min(data_get() |> select(rlang::sym(input$yvar)) |> unlist())),
-        mapping = aes_cust_colourfill()
+        mapping = aes_cust_colourfill(),
+        position = position_dodge(0.88)
       ) #fill is shading, color is border (set both)
     }
   })
-
+  ## categorical x & y
+  geomcust_count <- reactive({
+    if (input$geomcount) {
+      geom_count(
+        mapping = aes_cust_colourfill(),
+        position = position_dodge(0.88)
+      )
+    }
+  })
+  
   #### load data ####
 
   ## get the real data
@@ -246,6 +242,8 @@ app_server <- function( input, output, session ) {
 
   #### summarise data ####
   ## later modify group_by so it incorporates facets, and mappings e.g. (color/fill)
+  ## also include summary statistics where both variables are factors
+  ## and where both variables are numeric
   data_summary <- reactive({
 
     if (
@@ -258,14 +256,14 @@ app_server <- function( input, output, session ) {
           count = n(),
           mean = mean(get(input$yvar), na.rm = T),
           median = median(get(input$yvar), na.rm = T),
-          "geometric mean" = geomean(get(input$yvar), na.rm = T),
+          "geometric_mean" = geomean(get(input$yvar), na.rm = T),
           variance = var(get(input$yvar), na.rm = T),
-          "standard deviation" = sd(get(input$yvar), na.rm = T),
-          "standard error of mean" = sd(get(input$yvar), na.rm = T) / sqrt(n()),
-          "median absolute deviation" = mad(get(input$yvar), na.rm = T)
+          "standard_deviation" = sd(get(input$yvar), na.rm = T),
+          "standard_error_of_mean" = sd(get(input$yvar), na.rm = T) / sqrt(n()),
+          "median_absolute_deviation" = mad(get(input$yvar), na.rm = T)
         )
     } else {
-      "error"
+      tibble(error = "error")
     }
 
   })
@@ -303,20 +301,17 @@ app_server <- function( input, output, session ) {
                         choices = data_vars(),
                         selected = 1)
             }
-    })
+    }) |> bindEvent(input$data_load)
 
   #### format x or y as factors ####
 
   ## function for ggplot mapping as factors
-
-  ## catch error if xorder and yorder is not initialized
-  ## this is only thought to occur before the user clicked the dropdown menu
   xorder_catch <- reactive({
     (if (identical(length(input$xorder), length(x_factorlevels_default()))) {
       input$xorder
     } else {
       x_factorlevels_default()
-    }) |> tryCatch(error = function(e) x_factorlevels_default())
+    }) # |> tryCatch(error = function(e) x_factorlevels_default())
   })
 
   yorder_catch <- reactive({
@@ -324,9 +319,8 @@ app_server <- function( input, output, session ) {
       input$yorder
     } else {
       y_factorlevels_default()
-    }) |> tryCatch(error = function(e) y_factorlevels_default())
+    }) # |> tryCatch(error = function(e) y_factorlevels_default())
   })
-
 
   ## format x and y variables as ggplot mapping objects
   ## separate input$xvar and input$yvar for later greater modularity (e.g. adding mappings)

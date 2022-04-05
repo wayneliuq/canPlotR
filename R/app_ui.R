@@ -93,7 +93,7 @@ app_ui <- function(request) {
                     prompter::add_prompt(
                       position = "right",
                       message = "Click here to load the data you selected.",
-                      size = "large"
+                      size = "medium"
                     )
                 ),
 
@@ -107,20 +107,22 @@ app_ui <- function(request) {
                   column(
                     width = 6,
                     selectInput(inputId = "xvar",
-                                   label = "Choose x variable",
-                                   choices = character(0),
-                                   selectize = F,
-                                   multiple = F,
-                                   size = 4)
+                                label = "Choose x variable",
+                                choices = "No data loaded!",
+                                selected = 1,
+                                selectize = F,
+                                multiple = F,
+                                size = 4)
                   ),
                   column(
                     width = 6,
                     selectInput(inputId = "yvar",
-                                   label = "Choose y variable",
-                                   choices = character(0),
-                                   selectize = F,
-                                   multiple = F,
-                                   size = 4)
+                                label = "Choose y variable",
+                                choices = "No data loaded!",
+                                selected = 1,
+                                selectize = F,
+                                multiple = F,
+                                size = 4)
                   )
                 ),
 
@@ -226,13 +228,32 @@ app_ui <- function(request) {
                   )
                 )
               ),
-
+              
               tabPanel(
-                title = "2. Stratify Data",
-                uiOutput(outputId = "color_var")
-
+                title = "2. Color Data",
+                shinyWidgets::pickerInput(
+                  inputId = "colorvar",
+                  label = "Select a variable to color the data:",
+                  choices = "none",
+                  multiple = F,
+                  selected = 1
+                ),
+                
+                checkboxInput(
+                  inputId = "colorvar_asfactor",
+                  label = "Format as categorical"
+                ) |> prompter::add_prompt(
+                  position = "right",
+                  size = "large",
+                  message = "If the selected variable consists of numbers, a continuous
+					color scale will automatically be allowed to the plot where applicable.
+					If you wish to format the variable as a categorical variable (factor),
+					check this box. If the variable you selected is already detected as a
+					categorical variable, nothing will happen."
+                )
+                
               ),
-
+              
               tabPanel(
                 title = "3. NA",
 
@@ -356,6 +377,7 @@ app_ui <- function(request) {
 
                     ## categorical x, continuous y
                     fluidRow(
+                    
                       p(strong("Categorical x, continuous y")),
                       ## input$geomboxplot = geom_boxplot
                       shinyWidgets::switchInput(
@@ -398,6 +420,25 @@ app_ui <- function(request) {
                         size = "medium"
                       )
 
+                    ),
+                    
+                    ## categorical x & y
+                    fluidRow(
+                      
+                      p(strong("Categorical x & y")),
+                      
+                      shinyWidgets::switchInput(
+                        inputId = "geomcount",
+                        label = "counts plot",
+                        value = F,
+                        labelWidth = 200
+                      ) |> prompter::add_prompt(
+                        position = "top",
+                        message = "Display the number of items corresponding to a matrix of
+                        categorical x and y variables.",
+                        size = "medium"
+                      )
+                      
                     )
 
                   )
