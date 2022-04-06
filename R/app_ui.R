@@ -375,6 +375,8 @@ app_ui <- function(request) {
           # setting the shiny option in the options parameter. Please see the
           # vignette Introduction to shinyjqui for more details.
 
+          # https://yang-tang.github.io/shinyjqui/articles/introduction.html#the-input-values-and-shiny-options
+          
           fluidRow(
             plotOutput("plot") |>
               shinyjqui::jqui_resizable()

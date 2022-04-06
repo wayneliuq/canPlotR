@@ -72,8 +72,8 @@ app_server <- function( input, output, session ) {
         plot = final_ggplot(),
         device = input$export_filetype,
         scale = 1,
-        width = input$plot_size[[1]], # calculate from dpi later
-        height = input$plot_size[[2]],
+        width = 500, # calculate from dpi later
+        height = 600,
         units = "px",
         dpi = as.integer(input$export_resolution)
       )
@@ -631,7 +631,7 @@ app_server <- function( input, output, session ) {
   #### debug console ####
   output$debug <- renderText({
 
-    input$plot_size |> unlist()
+    paste0("unlist as.numeric: ", as.numeric(unlist(input$plot_size)))
 
   })
 
