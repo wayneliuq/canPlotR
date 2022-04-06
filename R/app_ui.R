@@ -376,7 +376,7 @@ app_ui <- function(request) {
           # vignette Introduction to shinyjqui for more details.
 
           # https://yang-tang.github.io/shinyjqui/articles/introduction.html#the-input-values-and-shiny-options
-          
+
           fluidRow(
             plotOutput("plot") |>
               shinyjqui::jqui_resizable()
@@ -388,7 +388,7 @@ app_ui <- function(request) {
             shinyWidgets::dropdown(
               label = "Export Figure",
 
-              ## export resolution
+              ## export filetype
               shinyWidgets::pickerInput(
                 inputId = "export_filetype",
                 label = "Filetype",
@@ -396,7 +396,7 @@ app_ui <- function(request) {
                 selected = 1
               ),
 
-              ## export size
+              ## export resolution
               shinyWidgets::sliderTextInput(
                 inputId = "export_resolution",
                 label = "Resolution",
@@ -407,6 +407,45 @@ app_ui <- function(request) {
                 position = "right",
                 message = "Select the desired resolution (pixels per inch) of
                 the exported figure."
+              ),
+
+              ## export file size
+              column(
+                width = 6,
+
+                numericInput(
+                  inputId = "export_w_px",
+                  label = "Width (px)",
+                  value = 600,
+                  min = 10,
+                  max = NA,
+                  step = 10
+                )
+
+              ),
+              column(
+                width = 6,
+
+                numericInput(
+                  inputId = "export_h_px",
+                  label = "Height (px)",
+                  value = 600,
+                  min = 10,
+                  max = NA,
+                  step = 10
+                )
+              ),
+
+              actionButton(
+                inputId = "export_size_get",
+                label = "Copy preview dimensions"
+              ) |> prompter::add_prompt(
+                size = "large",
+                position = "rght",
+                message = "The plot preview displayed in the main area can be
+                resized by dragging its bottom-right corner. Click this button
+                to copy the dimensions of the preview plot (adjusted for the
+                selected resolution)."
               ),
 
               ## download button
