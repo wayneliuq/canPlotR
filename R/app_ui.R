@@ -687,6 +687,13 @@ app_ui <- function(request) {
               ),
               tabPanel(
                 title = "debug",
+                fluidRow(
+
+                  #### dataGen UI ####
+                  mod_dataGen_ui("dataGen_1")
+                ),
+
+                #### debug text output ####
                 textOutput("debug")
               )
             )

@@ -6,6 +6,9 @@
 #' @noRd
 app_server <- function( input, output, session ) {
 
+  #### modules ####
+  mod_dataGen_server("dataGen_1")
+
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
 
