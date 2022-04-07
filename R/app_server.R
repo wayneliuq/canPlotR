@@ -55,7 +55,8 @@ app_server <- function( input, output, session ) {
   )
 
   #### download ggplot handler ####
-  ## to-do, implement action button (input$export_size_get) to get size from shinyjqui::resizable (input$plot_size[[1]], input$plot_size[[2]])
+  ## to-do, pop-up prompt with exported plot preview before download
+
   output$plot_download <- downloadHandler(
     filename = function() {
       paste0(
@@ -73,7 +74,7 @@ app_server <- function( input, output, session ) {
         plot = final_ggplot(),
         device = input$export_filetype,
         scale = 1,
-        width = input$export_w_px, # calculate from dpi later
+        width = input$export_w_px,
         height = input$export_h_px,
         units = "px",
         limitsize = FALSE,
@@ -82,6 +83,19 @@ app_server <- function( input, output, session ) {
     }
   )
 
+  observe({
+    updateNumericInput(
+      session,
+      inputId = "export_w_px",
+      value = round(input$plot_size[[1]] / 72 * input$export_resolution)
+    )
+
+    updateNumericInput(
+      session,
+      inputId = "export_h_px",
+      value = round(input$plot_size[[2]] / 72 * input$export_resolution)
+    )
+  }) |> bindEvent(input$export_size_get)
 
   #### misc labels ####
   ## legend titles

@@ -387,73 +387,80 @@ app_ui <- function(request) {
           fluidRow(
             shinyWidgets::dropdown(
               label = "Export Figure",
+              width = 300,
 
               ## export filetype
-              shinyWidgets::pickerInput(
-                inputId = "export_filetype",
-                label = "Filetype",
-                choices = c("png", "pdf"), # can expand to more filetypes supported by ggsave
-                selected = 1
-              ),
+              fluidRow(
+                shinyWidgets::pickerInput(
+                  inputId = "export_filetype",
+                  label = "Filetype",
+                  choices = c("bmp", "eps", "jpeg", "pdf", "png", "svg", "tiff"), # can expand to more filetypes supported by ggsave
+                  selected = "png"
+                ),
 
-              ## export resolution
-              shinyWidgets::sliderTextInput(
-                inputId = "export_resolution",
-                label = "Resolution",
-                choices = c(36, 72, 100, 200, 300, 600),
-                selected = "72"
-              ) |> prompter::add_prompt(
-                size = "medium",
-                position = "right",
-                message = "Select the desired resolution (pixels per inch) of
-                the exported figure."
-              ),
+                ## export resolution
+                shinyWidgets::sliderTextInput(
+                  inputId = "export_resolution",
+                  label = "Resolution (dpi)",
+                  choices = c(36, 72, 100, 200, 300, 600),
+                  selected = "300"
+                ) |> prompter::add_prompt(
+                  position = "right",
+                  size = "medium",
+                  message = "Select the desired resolution (pixels per inch) of
+                  the exported figure. The resolution of the displayed plot is 72 dpi."
+                ),
 
-              ## export file size
-              column(
-                width = 6,
+                ## export file size
+                column(
+                  width = 6,
 
-                numericInput(
-                  inputId = "export_w_px",
-                  label = "Width (px)",
-                  value = 600,
-                  min = 10,
-                  max = NA,
-                  step = 10
+                  numericInput(
+                    inputId = "export_w_px",
+                    label = "Width (px)",
+                    value = 600,
+                    min = 10,
+                    max = NA,
+                    step = 10
+                  )
+
+                ),
+                column(
+                  width = 6,
+
+                  numericInput(
+                    inputId = "export_h_px",
+                    label = "Height (px)",
+                    value = 600,
+                    min = 10,
+                    max = NA,
+                    step = 10
+                  )
                 )
-
               ),
-              column(
-                width = 6,
 
-                numericInput(
-                  inputId = "export_h_px",
-                  label = "Height (px)",
-                  value = 600,
-                  min = 10,
-                  max = NA,
-                  step = 10
+              fluidRow(
+                actionButton(
+                  inputId = "export_size_get",
+                  label = "Copy preview dimensions"
+                ) |> prompter::add_prompt(
+                  size = "medium",
+                  position = "rght",
+                  message = "The plot preview displayed in the main area can be
+                  resized by dragging its bottom-right corner. Click this button
+                  to copy the dimensions of the preview plot, adjusted for the
+                  selected resolution."
                 )
-              ),
-
-              actionButton(
-                inputId = "export_size_get",
-                label = "Copy preview dimensions"
-              ) |> prompter::add_prompt(
-                size = "large",
-                position = "rght",
-                message = "The plot preview displayed in the main area can be
-                resized by dragging its bottom-right corner. Click this button
-                to copy the dimensions of the preview plot (adjusted for the
-                selected resolution)."
               ),
 
               ## download button
-              downloadButton(
-                "plot_download",
-                label = "Export plot",
-                class = "btn-success"
-              )
+              fluidRow(
+                downloadButton(
+                  "plot_download",
+                  label = "Export plot",
+                  class = "btn-success"
+                )
+              ),
 
             )
           )
