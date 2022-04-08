@@ -5,10 +5,9 @@
 #' @import shiny
 #' @noRd
 app_server <- function( input, output, session ) {
-
   #### modules ####
   mod_dataGen_server("dataGen_1")
-
+  
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
 
@@ -58,8 +57,6 @@ app_server <- function( input, output, session ) {
   )
 
   #### download ggplot handler ####
-  ## to-do, pop-up prompt with exported plot preview before download
-
   output$plot_download <- downloadHandler(
     filename = function() {
       paste0(
@@ -77,28 +74,13 @@ app_server <- function( input, output, session ) {
         plot = final_ggplot(),
         device = input$export_filetype,
         scale = 1,
-        width = input$export_w_px,
-        height = input$export_h_px,
+        width = 500, # calculate from dpi later
+        height = 600,
         units = "px",
-        limitsize = FALSE,
         dpi = as.integer(input$export_resolution)
       )
     }
   )
-
-  observe({
-    updateNumericInput(
-      session,
-      inputId = "export_w_px",
-      value = round(input$plot_size[[1]] / 72 * input$export_resolution)
-    )
-
-    updateNumericInput(
-      session,
-      inputId = "export_h_px",
-      value = round(input$plot_size[[2]] / 72 * input$export_resolution)
-    )
-  }) |> bindEvent(input$export_size_get)
 
   #### misc labels ####
   ## legend titles
@@ -650,9 +632,6 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderText({
-
-    paste0("[[1]]", input$plot_size[[1]])
-
   })
 
   #### session end scripts ####

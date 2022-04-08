@@ -15,14 +15,13 @@ mod_dataGen_ui <- function(id){
 
     ## the module
     fluidRow(
-      p(strong("Seed")),
       #### UI: dataGen settings input ####
       column(
         width = 8,
         numericInput(
           inputId = ns("dataGen_seed"),
           value = as.integer(Sys.time()),
-          label = NULL,
+          label = "Seed",
           width = "100%"
         ) |> prompter::add_prompt(
           size = "medium",
@@ -57,7 +56,7 @@ mod_dataGen_server <- function(id){
     observe({
       updateNumericInput(
         inputId = "dataGen_seed",
-        value = runif(1, 1, 1e10) |> as.integer()
+        value = runif(1, 1, 1e9) |> as.integer()
       )
     }) |> bindEvent(input$dataGen_seed_randbutton)
 
