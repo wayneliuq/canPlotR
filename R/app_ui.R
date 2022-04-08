@@ -46,7 +46,6 @@ app_ui <- function(request) {
                   textInput(inputId = "plotid",
                             label = "Plot Name",
                             placeholder = "plot",
-                            value = "plot",
                             width = "100%") |>
                     prompter::add_prompt(
                       position = "right",
@@ -375,8 +374,6 @@ app_ui <- function(request) {
           # setting the shiny option in the options parameter. Please see the
           # vignette Introduction to shinyjqui for more details.
 
-          # https://yang-tang.github.io/shinyjqui/articles/introduction.html#the-input-values-and-shiny-options
-
           fluidRow(
             plotOutput("plot") |>
               shinyjqui::jqui_resizable()
@@ -415,80 +412,6 @@ app_ui <- function(request) {
                 label = "Export plot",
                 class = "btn-success"
               )
-              width = 300,
-
-              ## export filetype
-              fluidRow(
-                shinyWidgets::pickerInput(
-                  inputId = "export_filetype",
-                  label = "Filetype",
-                  choices = c("bmp", "eps", "jpeg", "pdf", "png", "svg", "tiff"), # can expand to more filetypes supported by ggsave
-                  selected = "png"
-                ),
-
-                ## export resolution
-                shinyWidgets::sliderTextInput(
-                  inputId = "export_resolution",
-                  label = "Resolution (dpi)",
-                  choices = c(36, 72, 100, 200, 300, 600),
-                  selected = "300"
-                ) |> prompter::add_prompt(
-                  position = "right",
-                  size = "medium",
-                  message = "Select the desired resolution (pixels per inch) of
-                  the exported figure. The resolution of the displayed plot is 72 dpi."
-                ),
-
-                ## export file size
-                column(
-                  width = 6,
-
-                  numericInput(
-                    inputId = "export_w_px",
-                    label = "Width (px)",
-                    value = 600,
-                    min = 10,
-                    max = NA,
-                    step = 10
-                  )
-
-                ),
-                column(
-                  width = 6,
-
-                  numericInput(
-                    inputId = "export_h_px",
-                    label = "Height (px)",
-                    value = 600,
-                    min = 10,
-                    max = NA,
-                    step = 10
-                  )
-                )
-              ),
-
-              fluidRow(
-                actionButton(
-                  inputId = "export_size_get",
-                  label = "Copy preview dimensions"
-                ) |> prompter::add_prompt(
-                  size = "medium",
-                  position = "rght",
-                  message = "The plot preview displayed in the main area can be
-                  resized by dragging its bottom-right corner. Click this button
-                  to copy the dimensions of the preview plot, adjusted for the
-                  selected resolution."
-                )
-              ),
-
-              ## download button
-              fluidRow(
-                downloadButton(
-                  "plot_download",
-                  label = "Export plot",
-                  class = "btn-success"
-                )
-              ),
 
             )
           )
@@ -715,13 +638,6 @@ app_ui <- function(request) {
               ),
               tabPanel(
                 title = "debug",
-                fluidRow(
-
-                  #### dataGen UI ####
-                  mod_dataGen_ui("dataGen_1")
-                ),
-
-                #### debug text output ####
                 textOutput("debug")
               )
             )
