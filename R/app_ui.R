@@ -357,8 +357,31 @@ app_ui <- function(request) {
 
               ),
 
+              #### statistics and regression ####
               tabPanel(
-                title = "3. NA",
+                title = "3. Statistics and Regression",
+
+                #### regression: continuous x & y ####
+                conditionalPanel(
+                  condition = "output.yvar_isnumeric",
+
+                  fluidRow(
+                    p(strong("Regression for continuous y variables")),
+
+                    shinyWidgets::pickerInput(
+                      inputId = "regression_contxy",
+                      label = "Select regression model:",
+                      choices = c(
+                        "none",
+                        "linear regression" = "lm",
+                        "local polynomial (smooth)" = "loess",
+                        "quadratic" = "loess_quadratic",
+                        "cubic" = "loess_cubic",
+                        "logistic regression" = "glm_logistic"
+                      )
+                    )
+                  )
+                )
 
               )
             )
