@@ -58,17 +58,37 @@ app_ui <- function(request) {
 
                 ## select data set
                 fluidRow(
-                  selectInput( "Choose data source",
-                              inputId = "input_data_type",
-                              choices = c(
-                                "Upload Data" = 1,
-                                "Example Data" = 2
-                              ),
-                            selected = 1),
+
+                  checkboxInput(
+                    inputId = "use_example_data",
+                    label = "Use example data",
+                    value = F
+                  ),
+
+                  conditionalPanel(
+                    condition  = "input.use_example_data",
+                    selectInput(
+                      inputId = "example_dataset",
+                      label = "Select example dataset",
+                      choices = c(
+                        "Example dose-response" = 1,
+                        "Hair Eye Color" = 2,
+                        "Chick Weight" = 3
+                      )
+                    )
+                  ),
+
+                  # selectInput( "Choose data source",
+                  #             inputId = "input_data_type",
+                  #             choices = c(
+                  #               "Upload Data" = 1,
+                  #               "Example Data" = 2
+                  #             ),
+                  #           selected = 1),
 
                   ## upload box for user data
                   conditionalPanel(
-                    condition = "input.input_data_type == 1",
+                    condition = "input.use_example_data == false",
                     fileInput(inputId = "data_user",
                               label = "Upload your data",
                               accept = c(".csv", ".txt", ".xls", ".xlsx"),
@@ -78,12 +98,6 @@ app_ui <- function(request) {
                         message = "Supported filetypes include 'xls', 'xlsx', 'csv', and 'txt'.
 						                      By default, only the first sheet of Excel spreadsheets will be loaded.",
                         size = "large")
-                  ),
-
-                  ## prompt that example data is loaded
-                  conditionalPanel(
-                    condition = "input.input_data_type == 2",
-                    renderText("Example data loaded.")
                   ),
 
                   ## action button bound to data loading
@@ -638,12 +652,7 @@ app_ui <- function(request) {
               ),
               tabPanel(
                 title = "debug",
-                textOutput("debug"),
-                
-                #### data generator module ####
-                fluidRow(
-                  mod_dataGen_ui("dataGen_1")
-                )
+                textOutput("debug")
               )
             )
           )

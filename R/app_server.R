@@ -5,9 +5,7 @@
 #' @import shiny
 #' @noRd
 app_server <- function( input, output, session ) {
-  #### modules ####
-  mod_dataGen_server("dataGen_1")
-  
+
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
 
@@ -273,7 +271,7 @@ app_server <- function( input, output, session ) {
   ## data is bound to button since reading data can be slow
   data_get <- reactive({
 
-    if (input$input_data_type == 1) {
+    if (!input$use_example_data) {
 
       ## find the file type of the user uploaded data
 
@@ -285,8 +283,12 @@ app_server <- function( input, output, session ) {
         readr::read_delim(input$data_user$datapath)
       }
 
-    } else if (input$input_data_type == 2) {
+    } else if (input$example_dataset == 1) {
       data("example_dr", envir = environment()); example_dr
+    } else if (input$example_dataset == 2) {
+      data("example_HairEye", envir = environment()); example_HairEye
+    } else if (input$example_dataset == 3) {
+      data("example_ChickWeight", envir = environment()); example_ChickWeight
     } else {
         tibble()
     }
