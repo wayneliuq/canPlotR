@@ -26,6 +26,9 @@ app_server <- function( input, output, session ) {
       geomcust_point() +
       geomcust_count() +
 
+      # regression geoms
+      geom_regression() +
+
       # title
       labs(title = input$plotid,
            fill = legend_lab(),
@@ -197,8 +200,8 @@ app_server <- function( input, output, session ) {
       geom_dotplot(
         binaxis = "y",
         stackdir = "center",
-        binwidth = 0.01 * (max(data_get() |> select(rlang::sym(input$yvar)) |> unlist()) -
-                             min(data_get() |> select(rlang::sym(input$yvar)) |> unlist())),
+        binwidth = 0.01 * (max(pull(data_get(), input$yvar)) -
+                             min(pull(data_get(), input$yvar))),
         mapping = aes_cust_colourfill(),
         position = position_dodge(0.85)
       ) #fill is shading, color is border (set both)
@@ -263,6 +266,93 @@ app_server <- function( input, output, session ) {
       rows = facet_vvar_catch(),
       scales = "fixed"
     )
+  })
+
+  #### regression ####
+
+  # how to get x from y value with `uniroot` functions
+  #  findInt <- function(model, value) {
+  #   function(x) {
+  #    predict(model, data.frame(x=x), type="response") - value
+  #   }
+  #  }
+  #
+  #   uniroot(findInt(drmod, 0.5), range(pull(example_dr, x)))$root |>
+  #     tryCatch(error = function(e) warning("Out of bounds"))
+
+  ## get variables for regression df
+
+  TruthNoneOrNull <- function(x) {
+    if (isTruthy(x) |> tryCatch(error = function(x) F)) {
+      if (x != "none") {
+        x
+      } else NULL
+    } else NULL
+  }
+
+  color_factor_var_formdf <- reactive({
+    TruthNoneOrNull(input$color_factor_var)
+  }) |> bindEvent(input$color_factor_var)
+
+  facet_hvar_formdf <- reactive({
+    TruthNoneOrNull(input$facet_hvar)
+  }) |> bindEvent(input$facet_hvar)
+
+  facet_vvar_formdf <- reactive({
+    TruthNoneOrNull(input$facet_vvar)
+  }) |> bindEvent(input$facet_vvar)
+
+  ## regression df
+  data_do <- reactive({
+
+      data.frame(
+        data_get() |> select(
+          x = input$xvar |> tryCatch(error = function(e) NULL),
+          y = input$yvar |> tryCatch(error = function(e) NULL),
+          A = color_factor_var_formdf(),
+          B = facet_hvar_formdf(),
+          C = facet_vvar_formdf()
+        )
+      )
+
+  })
+
+  ## regression formula
+  regr_formula <- reactive({
+    if (ncol(data_do()) > 2) {
+      paste0("y", "~", "x + ", colnames(data_regr())[-c(1:2)]) |> as.formula()
+    } else {
+      y ~ x
+    }
+  })
+
+  ## regression model
+  regr_model <- reactive({
+
+    if (input$regression_conty == "lm") {
+      lm(regr_formula(), data = data_do())
+    }
+
+  }) |>
+    bindEvent(input$regression_conty)
+
+  ## get coordinates for drawing
+  data_regr <- reactive({
+    if (input$regression_conty != "none") {
+      predict(regr_model(), se.fit = T) |> as_tibble() |> bind_cols(data_do())
+    } else {
+      data_do()
+    }
+  }) |>
+    bindEvent(input$regression_conty)
+
+  ## geom_line for drawing the regression predicted values
+  geom_regression <- reactive({
+    if (input$regression_conty != "none") {
+      geom_line(
+        mapping = aes(y = data_regr()$fit)
+      )
+    }
   })
 
   #### load data ####
@@ -346,12 +436,12 @@ app_server <- function( input, output, session ) {
   # need to optimize script to avoid using tryCatch as it is computationally expensive
 
   xvar_isnumeric <- reactive({
-    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> is.numeric()) |>
+    (data_get() |> pull(input$xvar) |> is.numeric()) |>
       tryCatch(error = function(e) {F})
   })
 
   yvar_isnumeric <- reactive({
-    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> is.numeric()) |>
+    (data_get() |> pull(input$yvar) |> is.numeric()) |>
       tryCatch(error = function(e) {F})
   })
 
@@ -454,7 +544,6 @@ app_server <- function( input, output, session ) {
   })
 
   ## format x and y variables as ggplot mapping objects
-  ## separate input$xvar and input$yvar for later greater modularity (e.g. adding mappings)
   # If your wrapper has a more specific interface with named arguments,
   # you need "enquote and unquote":
   # scatter_by <- function(data, x, y) {
@@ -464,25 +553,37 @@ app_server <- function( input, output, session ) {
   #   ggplot(data) + geom_point(aes(!!x, !!y))
 
   xvar_plot <- reactive({
-    (if (xvar_iscategorical()) {
+
+    if (xvar_iscategorical()) {
+
       factor(
         get(input$xvar),
         levels = xorder_catch()
       ) |> expr()
+
     } else {
+
       get(input$xvar) |> expr()
-    })
+
+    }
+
   })
 
   yvar_plot <- reactive({
-    (if (yvar_iscategorical()) {
+
+    if (yvar_iscategorical()) {
+
       factor(
         get(input$yvar),
         levels = yorder_catch()
       ) |> expr()
+
     } else {
+
       get(input$yvar) |> expr()
-    })
+
+    }
+
   })
 
   #### numeric variable transformation ####
@@ -567,27 +668,27 @@ app_server <- function( input, output, session ) {
 
   #### get the factor levels of variables ####
   x_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$xvar)) |> unlist() |> factor() |> levels()) |>
+    (data_get() |> pull(input$xvar) |> factor() |> levels()) |>
       tryCatch(error = function(e) "NA")
   })
 
   y_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$yvar)) |> unlist() |> factor() |> levels()) |>
+    (data_get() |> pull(input$yvar) |> factor() |> levels()) |>
       tryCatch(error = function(e) "NA")
   })
 
   color_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$color_factor_var)) |> unlist() |> factor() |> levels()) |>
+    (data_get() |> pull(input$color_factor_var) |> factor() |> levels()) |>
       tryCatch(error = function(e) "NA")
   })
 
   facet_h_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$facet_hvar)) |> unlist() |> factor() |> levels()) |>
+    (data_get() |> pull(input$facet_hvar) |> factor() |> levels()) |>
       tryCatch(error = function(e) "NA")
   })
 
   facet_v_factorlevels_default <- reactive({
-    (data_get() |> select(rlang::sym(input$facet_vvar)) |> unlist() |> factor() |> levels()) |>
+    (data_get() |> pull(input$facet_vvar) |> factor() |> levels()) |>
       tryCatch(error = function(e) "NA")
   })
   #### reorder factor levels observer ####
@@ -633,7 +734,12 @@ app_server <- function( input, output, session ) {
   }) |> bindEvent(input$facet_vvar)
 
   #### debug console ####
-  output$debug <- renderText({
+  output$debug <- renderTable({
+    regr_modelpred_vals()
+  })
+
+  output$debug2 <- renderText({
+    regr_formula() |> deparse()
   })
 
   #### session end scripts ####

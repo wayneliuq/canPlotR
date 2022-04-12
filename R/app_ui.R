@@ -109,7 +109,11 @@ app_ui <- function(request) {
                       message = "Click here to load the data you selected.",
                       size = "medium"
                     )
-                ),
+                )
+              ),
+
+              tabPanel(
+                title = "2. Choose Variables",
 
                 #### choose columns to plot ####
 
@@ -240,13 +244,9 @@ app_ui <- function(request) {
                            )
                     )
                   )
-                )
-              ),
+                ),
 
-              tabPanel(
-                title = "2. Group and Split Data",
-
-                ## split by color (factor)
+                #### split by color (factor) ####
 
                 fluidRow(
                   p(strong("Group data by color")),
@@ -283,7 +283,7 @@ app_ui <- function(request) {
                   )
                 ),
 
-                ## split by facet
+                #### split data by facet ####
 
                 fluidRow(
 
@@ -359,7 +359,7 @@ app_ui <- function(request) {
 
               #### statistics and regression ####
               tabPanel(
-                title = "3. Statistics and Regression",
+                title = "3. Regression",
 
                 #### regression: continuous x & y ####
                 conditionalPanel(
@@ -369,7 +369,7 @@ app_ui <- function(request) {
                     p(strong("Regression for continuous y variables")),
 
                     shinyWidgets::pickerInput(
-                      inputId = "regression_contxy",
+                      inputId = "regression_conty",
                       label = "Select regression model:",
                       choices = c(
                         "none",
@@ -675,7 +675,8 @@ app_ui <- function(request) {
               ),
               tabPanel(
                 title = "debug",
-                textOutput("debug")
+                tableOutput("debug"),
+                textOutput("debug2")
               )
             )
           )
