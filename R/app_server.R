@@ -621,8 +621,7 @@ app_server <- function( input, output, session ) {
     "logit",
     "probit",
     "date",
-    "time hms" = "hms",
-    "time POSIX" = "time"
+    "time hms" = "hms"
   )
 
   x_scale_trans <- reactive({
