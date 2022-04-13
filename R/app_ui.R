@@ -363,7 +363,7 @@ app_ui <- function(request) {
 
                 #### regression: continuous x & y ####
                 conditionalPanel(
-                  condition = "output.yvar_isnumeric",
+                  condition = "output.yvar_isnumeric && output.xvar_isnumeric",
 
                   fluidRow(
                     p(strong("Regression for continuous y variables")),

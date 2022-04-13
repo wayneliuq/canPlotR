@@ -11,9 +11,9 @@ app_server <- function( input, output, session ) {
 
   final_ggplot <- reactive({
     ggplot(
-      data = data_get(),
-      mapping = aes(x = !!xvar_plot(),
-                    y = !!yvar_plot())
+      data = data_regr(),
+      mapping = aes(x = x,
+                    y = y)
     ) +
 
       # custom geoms
@@ -45,7 +45,7 @@ app_server <- function( input, output, session ) {
       y_scale_trans() +
 
       # facets
-      facet_cust()+
+      facet_cust() +
 
       #theme, to be customized
       theme_bw()
@@ -114,9 +114,9 @@ app_server <- function( input, output, session ) {
   aes_cust_colour <- reactive({
     if (colorvar_catch()) {
       if (input$color_factor_var == "none") {
-        aes(colour = get(input$color_numeric_var))
+        aes(colour = colorNumeric)
       } else {
-        aes(colour = factor(get(input$color_factor_var), levels = colorvar_levels()))
+        aes(colour = factor(colorFactor, levels = colorvar_levels()))
       }
     } else {aes()}
   })
@@ -124,9 +124,9 @@ app_server <- function( input, output, session ) {
   aes_cust_fill <- reactive({
     if (colorvar_catch()) {
       if (input$color_factor_var == "none") {
-        aes(fill = get(input$color_numeric_var))
+        aes(fill = colorNumeric)
       } else {
-        aes(fill = factor(get(input$color_factor_var), levels = colorvar_levels()))
+        aes(fill = factor(colorFactor, levels = colorvar_levels()))
       }
     } else {aes()}
   })
@@ -134,11 +134,11 @@ app_server <- function( input, output, session ) {
   aes_cust_colourfill <- reactive({
     if (colorvar_catch()) {
       if (input$color_factor_var == "none") {
-        aes(colour = get(input$color_numeric_var),
-            fill = get(input$color_numeric_var))
+        aes(colour = colorNumeric,
+            fill = colorNumeric)
       } else {
-        aes(colour = factor(get(input$color_factor_var), levels = colorvar_levels()),
-            fill = factor(get(input$color_factor_var), levels = colorvar_levels()))
+        aes(colour = factor(colorFactor, levels = colorvar_levels()),
+            fill = factor(colorFactor, levels = colorvar_levels()))
       }
     } else {aes()}
   })
@@ -156,7 +156,7 @@ app_server <- function( input, output, session ) {
 
   geomcust_bin2d <- reactive({
     if (input$geombin2d) {
-      geom_bin2d(bins = 40,
+      geom_bin2d(bins = 25,
                  mapping = aes_cust_fill()) #fill (set fill)
     }
   })
@@ -200,8 +200,7 @@ app_server <- function( input, output, session ) {
       geom_dotplot(
         binaxis = "y",
         stackdir = "center",
-        binwidth = 0.01 * (max(pull(data_get(), input$yvar)) -
-                             min(pull(data_get(), input$yvar))),
+        binwidth = 0.01 * diff(range(data_regr()$y)),
         mapping = aes_cust_colourfill(),
         position = position_dodge(0.85)
       ) #fill is shading, color is border (set both)
@@ -238,34 +237,32 @@ app_server <- function( input, output, session ) {
   })
 
   ## make facet_cust function
-  facet_hvar_catch <- reactive({
-    if (isTruthy(input$facet_hvar) |> tryCatch(error = function(e) F)) {
-      if (input$facet_hvar != "none") {
-        input$facet_hvar |>
-          get() |>
-          factor(levels = facet_hvar_levels()) |>
-          vars()
-      } else {NULL}
-    } else {NULL}
-  })
-
-  facet_vvar_catch <- reactive({
-    if (isTruthy(input$facet_vvar) |> tryCatch(error = function(e) F)) {
-      if (input$facet_vvar != "none") {
-        input$facet_vvar |>
-          get() |>
-          factor(levels = facet_vvar_levels()) |>
-          vars()
-      } else {NULL}
-    } else {NULL}
-  })
 
   facet_cust <- reactive({
-    facet_grid(
-      cols = facet_hvar_catch(),
-      rows = facet_vvar_catch(),
-      scales = "fixed"
-    )
+
+    if (data_regr()$facetHFactor |> is.null() |> suppressWarnings() & data_regr()$facetVFactor |> is.null() |> suppressWarnings()) {
+      facet_grid(
+        cols = NULL,
+        rows = NULL
+      )
+    } else if (data_regr()$facetVFactor |> is.null() |> suppressWarnings()) {
+      facet_grid(
+        cols = facetHFactor |> factor(levels = facet_hvar_levels()) |> vars(),
+        scales = "fixed"
+      )
+    } else if (data_regr()$facetHFactor |> is.null() |> suppressWarnings()) {
+      facet_grid(
+        rows = facetVFactor |> factor(levels = facet_vvar_levels()) |> vars(),
+        scales = "fixed"
+      )
+    } else {
+      facet_grid(
+        cols = facetHFactor |> factor(levels = facet_hvar_levels()) |> vars(),
+        rows = facetVFactor |> factor(levels = facet_vvar_levels()) |> vars(),
+        scales = "fixed"
+      )
+    }
+
   })
 
   #### regression ####
@@ -292,35 +289,40 @@ app_server <- function( input, output, session ) {
 
   color_factor_var_formdf <- reactive({
     TruthNoneOrNull(input$color_factor_var)
-  }) |> bindEvent(input$color_factor_var)
+  })# |> bindEvent(input$color_factor_var)
+
+  color_numeric_var_formdf <- reactive({
+    TruthNoneOrNull(input$color_numeric_var)
+  })# |> bindEvent(input$color_numeric_var)
 
   facet_hvar_formdf <- reactive({
     TruthNoneOrNull(input$facet_hvar)
-  }) |> bindEvent(input$facet_hvar)
+  })# |> bindEvent(input$facet_hvar)
 
   facet_vvar_formdf <- reactive({
     TruthNoneOrNull(input$facet_vvar)
-  }) |> bindEvent(input$facet_vvar)
+  })# |> bindEvent(input$facet_vvar)
 
   ## regression df
   data_do <- reactive({
 
-      data.frame(
         data_get() |> select(
           x = input$xvar |> tryCatch(error = function(e) NULL),
           y = input$yvar |> tryCatch(error = function(e) NULL),
-          A = color_factor_var_formdf(),
-          B = facet_hvar_formdf(),
-          C = facet_vvar_formdf()
+          colorNumeric = color_numeric_var_formdf(),
+          colorFactor = color_factor_var_formdf(),
+          facetHFactor = facet_hvar_formdf(),
+          facetVFactor = facet_vvar_formdf()
         )
-      )
 
   })
 
   ## regression formula
   regr_formula <- reactive({
-    if (ncol(data_do()) > 2) {
-      paste0("y", "~", "x + ", colnames(data_regr())[-c(1:2)]) |> as.formula()
+    if (any(grepl("Factor", colnames(data_do())))) {
+      paste0(
+        "y ~ x + ",
+        (grep("Factor", colnames(data_do()), value = T) |> paste(collapse = " + "))) |> as.formula()
     } else {
       y ~ x
     }
@@ -333,8 +335,7 @@ app_server <- function( input, output, session ) {
       lm(regr_formula(), data = data_do())
     }
 
-  }) |>
-    bindEvent(input$regression_conty)
+  })
 
   ## get coordinates for drawing
   data_regr <- reactive({
@@ -343,16 +344,31 @@ app_server <- function( input, output, session ) {
     } else {
       data_do()
     }
-  }) |>
-    bindEvent(input$regression_conty)
+  })
 
   ## geom_line for drawing the regression predicted values
+
   geom_regression <- reactive({
+
     if (input$regression_conty != "none") {
-      geom_line(
-        mapping = aes(y = data_regr()$fit)
-      )
+
+      if (data_regr()$colorFactor |> is.null() |> suppressWarnings()) {
+        geom_line(
+          mapping = aes(
+            y = fit
+          )
+        )
+      } else {
+        geom_line(
+          mapping = aes(
+            y = fit,
+            color = colorFactor
+          )
+        )
+      }
+
     }
+
   })
 
   #### load data ####
@@ -667,29 +683,30 @@ app_server <- function( input, output, session ) {
   })
 
   #### get the factor levels of variables ####
+  GetColLevelsCatch <- function(dat, col, error_output) {
+    (dat |> pull(col) |> factor() |> levels()) |>
+      tryCatch(error = function(e) error_output)
+  }
+
   x_factorlevels_default <- reactive({
-    (data_get() |> pull(input$xvar) |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
+    GetColLevelsCatch(data_regr(), "x", "NA")
   })
 
   y_factorlevels_default <- reactive({
-    (data_get() |> pull(input$yvar) |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
+    GetColLevelsCatch(data_regr(), "y", "NA")
   })
 
   color_factorlevels_default <- reactive({
-    (data_get() |> pull(input$color_factor_var) |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
+    GetColLevelsCatch(data_regr(), "colorFactor", "NA")
   })
 
   facet_h_factorlevels_default <- reactive({
-    (data_get() |> pull(input$facet_hvar) |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
+    GetColLevelsCatch(data_regr(), "facetHFactor", "NA")
+
   })
 
   facet_v_factorlevels_default <- reactive({
-    (data_get() |> pull(input$facet_vvar) |> factor() |> levels()) |>
-      tryCatch(error = function(e) "NA")
+    GetColLevelsCatch(data_regr(), "facetVFactor", "NA")
   })
   #### reorder factor levels observer ####
 
@@ -699,7 +716,7 @@ app_server <- function( input, output, session ) {
             inputId = "xorder",
             items = x_factorlevels_default()
           )
-  }) |> bindEvent(input$xvar)
+  })# |> bindEvent(input$xvar)
 
   observe({
     shinyjqui::updateOrderInput(
@@ -707,7 +724,7 @@ app_server <- function( input, output, session ) {
       inputId = "yorder",
       items = y_factorlevels_default()
     )
-  }) |> bindEvent(input$yvar)
+  })# |> bindEvent(input$yvar)
 
   observe({
     shinyjqui::updateOrderInput(
@@ -715,7 +732,7 @@ app_server <- function( input, output, session ) {
       inputId = "color_factor_var_order",
       items = color_factorlevels_default()
     )
-  }) |> bindEvent(input$color_factor_var)
+  })# |> bindEvent(input$color_factor_var)
 
   observe({
     shinyjqui::updateOrderInput(
@@ -723,7 +740,7 @@ app_server <- function( input, output, session ) {
       inputId = "facet_hvar_order",
       items = facet_h_factorlevels_default()
     )
-  }) |> bindEvent(input$facet_hvar)
+  })# |> bindEvent(input$facet_hvar)
 
   observe({
     shinyjqui::updateOrderInput(
@@ -731,11 +748,11 @@ app_server <- function( input, output, session ) {
       inputId = "facet_vvar_order",
       items =facet_v_factorlevels_default()
     )
-  }) |> bindEvent(input$facet_vvar)
+  })# |> bindEvent(input$facet_vvar)
 
   #### debug console ####
   output$debug <- renderTable({
-    regr_modelpred_vals()
+    data_regr()
   })
 
   output$debug2 <- renderText({
