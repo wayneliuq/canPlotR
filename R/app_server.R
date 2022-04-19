@@ -12,7 +12,7 @@ app_server <- function( input, output, session ) {
   final_ggplot <- reactive({
     ggplot(
       data = data_regr(),
-      mapping = aes(x = x,
+      mapping = aes(x = !!xvar_plot(),
                     y = y)
     ) +
 
@@ -304,16 +304,17 @@ app_server <- function( input, output, session ) {
   })# |> bindEvent(input$facet_vvar)
 
   ## regression df
+
   data_do <- reactive({
 
-        data_get() |> select(
-          x = input$xvar |> tryCatch(error = function(e) NULL),
-          y = input$yvar |> tryCatch(error = function(e) NULL),
-          colorNumeric = color_numeric_var_formdf(),
-          colorFactor = color_factor_var_formdf(),
-          facetHFactor = facet_hvar_formdf(),
-          facetVFactor = facet_vvar_formdf()
-        )
+    data_get() |> select(
+      x = input$xvar |> tryCatch(error = function(e) NULL),
+      y = input$yvar |> tryCatch(error = function(e) NULL),
+      colorNumeric = color_numeric_var_formdf(),
+      colorFactor = color_factor_var_formdf(),
+      facetHFactor = facet_hvar_formdf(),
+      facetVFactor = facet_vvar_formdf()
+    )
 
   })
 
@@ -408,7 +409,7 @@ app_server <- function( input, output, session ) {
   data_summary <- reactive({
 
     if (
-      (xvar_iscategorical() & !yvar_iscategorical()) |>
+      (xvar_iscategorical()) |>
       tryCatch(error = function(e) F)
     ) {
       data_get() |>
@@ -465,20 +466,20 @@ app_server <- function( input, output, session ) {
     !xvar_isnumeric() | input$x_asfactor
   })
 
-  yvar_iscategorical <- reactive({
-    !yvar_isnumeric() | input$y_asfactor
-  })
+  # yvar_iscategorical <- reactive({
+  #   !yvar_isnumeric() | input$y_asfactor
+  # })
 
   ## send it to browser to update inputs
   output$xvar_isnumeric <- reactive(xvar_isnumeric())
   output$yvar_isnumeric <- reactive(yvar_isnumeric())
   output$xvar_isfactor <- reactive({xvar_iscategorical()})
-  output$yvar_isfactor <- reactive({yvar_iscategorical()})
+  # output$yvar_isfactor <- reactive({yvar_iscategorical()})
 
   outputOptions(output, "xvar_isnumeric", suspendWhenHidden = F)
   outputOptions(output, "yvar_isnumeric", suspendWhenHidden = F)
   outputOptions(output, "xvar_isfactor", suspendWhenHidden = F)
-  outputOptions(output, "yvar_isfactor", suspendWhenHidden = F)
+  # outputOptions(output, "yvar_isfactor", suspendWhenHidden = F)
 
   #### update UI for coloring/splitting data ####
 
@@ -521,13 +522,13 @@ app_server <- function( input, output, session ) {
       choices = c("none", data_vars())
     )
 
-  }) |> bindEvent(data_vars())
+  }) #|> bindEvent(data_vars())
 
 
   #### update column selection ####
   # bind it to data load button to increase efficiency
   observe({
-    if (tryCatch(is.character(data_vars()), error = function(e) F)) {
+    if (tryCatch(isTruthy(data_vars_numeric()), error = function(e) F)) {
       updateSelectInput(session,
                         inputId = "xvar",
                         choices = data_vars(),
@@ -535,10 +536,27 @@ app_server <- function( input, output, session ) {
 
       updateSelectInput(session,
                         inputId = "yvar",
-                        choices = data_vars(),
+                        choices = data_vars_numeric(),
                         selected = 1)
-            }
-    }) |> bindEvent(input$data_load)
+    } else if (isTruthy(data_vars() |> tryCatch(error = function(e) F))) {
+      shinyWidgets::sendSweetAlert(
+        title = "No numeric variables detected",
+        type = "error",
+        text = "This dashboard requires at least one numeric variable, as only
+        numeric variables are able to be plotted on the y-axis. Please double-
+        check and upload a new set of data where at least one column only
+        consist of numbers."
+      )
+    } else {
+      shinyWidgets::sendSweetAlert(
+        title = "Data error",
+        type = "error",
+        text = "Something went wrong with the data you uploaded and columns of
+        data could not be detected. Please make sure your file is in the correct
+        format and upload a new file."
+      )
+    }
+  }) |> bindEvent(input$data_load)
 
   #### format x or y as factors and choose order ####
 
@@ -551,13 +569,13 @@ app_server <- function( input, output, session ) {
     }) # |> tryCatch(error = function(e) x_factorlevels_default())
   })
 
-  yorder_catch <- reactive({
-    (if (identical(length(input$yorder), length(y_factorlevels_default()))) {
-      input$yorder
-    } else {
-      y_factorlevels_default()
-    }) # |> tryCatch(error = function(e) y_factorlevels_default())
-  })
+  # yorder_catch <- reactive({
+  #   (if (identical(length(input$yorder), length(y_factorlevels_default()))) {
+  #     input$yorder
+  #   } else {
+  #     y_factorlevels_default()
+  #   }) # |> tryCatch(error = function(e) y_factorlevels_default())
+  # })
 
   ## format x and y variables as ggplot mapping objects
   # If your wrapper has a more specific interface with named arguments,
@@ -573,34 +591,34 @@ app_server <- function( input, output, session ) {
     if (xvar_iscategorical()) {
 
       factor(
-        get(input$xvar),
+        x,
         levels = xorder_catch()
       ) |> expr()
 
     } else {
 
-      get(input$xvar) |> expr()
+      x |> expr()
 
     }
 
   })
 
-  yvar_plot <- reactive({
-
-    if (yvar_iscategorical()) {
-
-      factor(
-        get(input$yvar),
-        levels = yorder_catch()
-      ) |> expr()
-
-    } else {
-
-      get(input$yvar) |> expr()
-
-    }
-
-  })
+  # yvar_plot <- reactive({
+  #
+  #   # if (yvar_iscategorical()) {
+  #   #
+  #   #   factor(
+  #   #     get(input$yvar),
+  #   #     levels = yorder_catch()
+  #   #   ) |> expr()
+  #   #
+  #   # } else {
+  #
+  #     get(input$yvar) |> expr()
+  #
+  #   #}
+  #
+  # })
 
   #### numeric variable transformation ####
   # allow the user to set the scale transformation for
@@ -631,9 +649,9 @@ app_server <- function( input, output, session ) {
   })
 
   y_scale_trans <- reactive({
-    if (!yvar_iscategorical()) {
+    # if (!yvar_iscategorical()) {
       scale_y_continuous(trans = input$ytrans)
-    }
+    # }
   })
 
   ## if variable is factor, do not allow selection of transformation
@@ -661,24 +679,24 @@ app_server <- function( input, output, session ) {
       )
     }
 
-    if (yvar_iscategorical()) {
-      shinyWidgets::updatePickerInput(
-        session = session,
-        inputId = "ytrans",
-        choices = trans_continuous,
-        choicesOpt = list(disabled = disabled_choices,
-                          style = ifelse(disabled_choices,
-                                         yes = "color: rgba(119, 119, 119, 0.5);",
-                                         no = ""))
-
-      )
-    } else {
+    # if (yvar_iscategorical()) {
+    #   shinyWidgets::updatePickerInput(
+    #     session = session,
+    #     inputId = "ytrans",
+    #     choices = trans_continuous,
+    #     choicesOpt = list(disabled = disabled_choices,
+    #                       style = ifelse(disabled_choices,
+    #                                      yes = "color: rgba(119, 119, 119, 0.5);",
+    #                                      no = ""))
+    #
+    #   )
+    # } else {
       shinyWidgets::updatePickerInput(
         session = session,
         inputId = "ytrans",
         choices = trans_continuous
       )
-    }
+    # }
   })
 
   #### get the factor levels of variables ####
@@ -691,9 +709,9 @@ app_server <- function( input, output, session ) {
     GetColLevelsCatch(data_regr(), "x", "NA")
   })
 
-  y_factorlevels_default <- reactive({
-    GetColLevelsCatch(data_regr(), "y", "NA")
-  })
+  # y_factorlevels_default <- reactive({
+  #   GetColLevelsCatch(data_regr(), "y", "NA")
+  # })
 
   color_factorlevels_default <- reactive({
     GetColLevelsCatch(data_regr(), "colorFactor", "NA")
@@ -717,13 +735,13 @@ app_server <- function( input, output, session ) {
           )
   })# |> bindEvent(input$xvar)
 
-  observe({
-    shinyjqui::updateOrderInput(
-      session,
-      inputId = "yorder",
-      items = y_factorlevels_default()
-    )
-  })# |> bindEvent(input$yvar)
+  # observe({
+  #   shinyjqui::updateOrderInput(
+  #     session,
+  #     inputId = "yorder",
+  #     items = y_factorlevels_default()
+  #   )
+  # })# |> bindEvent(input$yvar)
 
   observe({
     shinyjqui::updateOrderInput(

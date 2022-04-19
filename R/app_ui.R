@@ -10,6 +10,7 @@ app_ui <- function(request) {
     golem_add_external_resources(),
     prompter::use_prompt(),
     shinybusy::add_busy_bar(timeout = 500),
+    shinyWidgets::useSweetAlert(theme = "minimal"),
 
     ## Application UI
     fluidPage(
@@ -149,6 +150,14 @@ app_ui <- function(request) {
                   column(
                     width = 6,
 
+                    ## select transformation for numeric x variable
+                    shinyWidgets::pickerInput(
+                      inputId = "xtrans",
+                      label = "x-axis transformation",
+                      choices = trans_continuous,
+                      selected = 1
+                    ),
+                    
                     ## format x as factor
                     conditionalPanel(
                       condition = "output.xvar_isnumeric",
@@ -164,14 +173,6 @@ app_ui <- function(request) {
                         continuous variable. Select this box if you want to format
                         the x-variable as a categorical variable (factor)."
                       )
-                    ),
-
-                    ## select transformation for numeric x variable
-                    shinyWidgets::pickerInput(
-                      inputId = "xtrans",
-                      label = "x-axis transformation",
-                      choices = trans_continuous,
-                      selected = 1
                     ),
 
                     # reorder categorical x, hide in dropdown since sometimes it's huge
@@ -200,21 +201,21 @@ app_ui <- function(request) {
                     width = 6,
 
                     ## format y as factor
-                    conditionalPanel(
-                      condition = "output.yvar_isnumeric",
-                      checkboxInput(
-                        inputId = "y_asfactor",
-                        label = "Format as categorical",
-                        value = F
-                      ) |> prompter::add_prompt(
-                        position = "right",
-                        size = "large",
-                        message = "If the column you selected as the y variable
-                        conists of only numbers, it will be assumed to be a
-                        continuous variable. Select this box if you want to format
-                        the x-variable as a categorical variable (factor)."
-                      )
-                    ),
+                    # conditionalPanel(
+                    #   condition = "output.yvar_isnumeric",
+                    #   checkboxInput(
+                    #     inputId = "y_asfactor",
+                    #     label = "Format as categorical",
+                    #     value = F
+                    #   ) |> prompter::add_prompt(
+                    #     position = "right",
+                    #     size = "large",
+                    #     message = "If the column you selected as the y variable
+                    #     conists of only numbers, it will be assumed to be a
+                    #     continuous variable. Select this box if you want to format
+                    #     the x-variable as a categorical variable (factor)."
+                    #   )
+                    # ),
 
                     ## select transformation for numeric y variable
                     shinyWidgets::pickerInput(
@@ -222,27 +223,27 @@ app_ui <- function(request) {
                       label = "y-axis transformation",
                       choices = trans_continuous,
                       selected = 1
-                    ),
+                    )
 
                     ## reorder categorical x, hide in dropdown since sometimes it's huge
-                    conditionalPanel(
-                      condition = "output.yvar_isfactor",
-                      shinyWidgets::dropdown(
-                        status = "primary",
-                        label = "re-order y categories",
-                        shinyjqui::orderInput(
-                          inputId = "yorder",
-                          label = NULL,
-                          items = c("NA"),
-                          item_class = "primary"
-                        )
-                      ) |> prompter::add_prompt(
-                             position = "right",
-                             size = "large",
-                             message = "Click to open a menu which allows you to
-                             reorder the categories. Drag to re-order."
-                           )
-                    )
+                    # conditionalPanel(
+                    #   condition = "output.yvar_isfactor",
+                    #   shinyWidgets::dropdown(
+                    #     status = "primary",
+                    #     label = "re-order y categories",
+                    #     shinyjqui::orderInput(
+                    #       inputId = "yorder",
+                    #       label = NULL,
+                    #       items = c("NA"),
+                    #       item_class = "primary"
+                    #     )
+                    #   ) |> prompter::add_prompt(
+                    #          position = "right",
+                    #          size = "large",
+                    #          message = "Click to open a menu which allows you to
+                    #          reorder the categories. Drag to re-order."
+                    #        )
+                    # )
                   )
                 ),
 
@@ -360,7 +361,6 @@ app_ui <- function(request) {
               #### statistics and regression ####
               tabPanel(
                 title = "3. Regression",
-
                 #### regression: continuous x & y ####
                 conditionalPanel(
                   condition = "output.yvar_isnumeric && output.xvar_isnumeric",
