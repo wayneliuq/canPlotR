@@ -6,6 +6,9 @@
 #' @noRd
 app_server <- function( input, output, session ) {
 
+  #### modules ####
+  mod_regression_server("regression_1")
+
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
 
@@ -308,8 +311,8 @@ app_server <- function( input, output, session ) {
   data_do <- reactive({
 
     data_get() |> select(
-      x = input$xvar |> tryCatch(error = function(e) NULL),
-      y = input$yvar |> tryCatch(error = function(e) NULL),
+      x = input$xvar |> tryCatch(error = function(e) 0),
+      y = input$yvar |> tryCatch(error = function(e) 0),
       colorNumeric = color_numeric_var_formdf(),
       colorFactor = color_factor_var_formdf(),
       facetHFactor = facet_hvar_formdf(),
