@@ -6,9 +6,6 @@
 #' @noRd
 app_server <- function( input, output, session ) {
 
-  #### modules ####
-  mod_regression_server("regression_1")
-
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
 
@@ -311,8 +308,8 @@ app_server <- function( input, output, session ) {
   data_do <- reactive({
 
     data_get() |> select(
-      x = input$xvar |> tryCatch(error = function(e) 0),
-      y = input$yvar |> tryCatch(error = function(e) 0),
+      x = input$xvar |> tryCatch(error = function(e) 1),
+      y = input$yvar |> tryCatch(error = function(e) 1),
       colorNumeric = color_numeric_var_formdf(),
       colorFactor = color_factor_var_formdf(),
       facetHFactor = facet_hvar_formdf(),
@@ -321,16 +318,115 @@ app_server <- function( input, output, session ) {
 
   })
 
+  #### regression logics ####
+  ## perform regression on split data ##
+  data_do_split <- reactive({
+    if (any(grepl("Factor", colnames(data_do())))) {
+      data_do() |>
+        group_by(
+          across(
+            all_of(
+              grep("Factor", colnames(data_do()), value = T)
+            )
+          )
+        ) |>
+        group_split()
+    } else {data_do() |> group_split()}
+  })
 
-  ## get coordinates for drawing
+  ## function to apply prediction to split tables ##
+  ifListLapply <- function(x, fct, ...) {
+    if ("list" %in% class(x)) {
+      lapply(FUN = fct, x, ...) |> suppressWarnings()
+    } else {match.fun(fct)(x, ...)  |> suppressWarnings()}
+  }
+
+  ifListMapply <- function(x, fct, ...) {
+    if ("list" %in% class(x)) {
+      mapply(FUN = fct, x, ..., SIMPLIFY = F)
+    } else {match.fun(fct)(x, ...)}
+  }
+
+  ## function to generate formula for x and y ##
+  formula_x <- function() {
+    if (input$xtrans %in% c("log10", "log2", "log", "sqrt", "exp")) {
+      paste0(input$xtrans, "(x)")
+    } else if (input$xtrans == "logit") {
+      "qlogis(x)"
+    } else if (input$xtrans == "probit") {
+      "qnorm(x)"
+    } else {
+      "x"
+    }
+  }
+
+  formula_y <- function() {
+    if (input$ytrans %in% c("log10", "log2", "log", "sqrt", "exp")) {
+      paste0(input$ytrans, "(y)")
+    } else if (input$ytrans == "logit") {
+      "qlogis(y)"
+    } else if (input$ytrans == "probit") {
+      "qnorm(y)"
+    } else {
+      "y"
+    }
+  }
+
+
+  regr_formula <- reactive({
+    paste0(
+      formula_y(),
+      " ~ ",
+      formula_x()
+    ) |> as.formula()
+  })
+
+  ## perform model fitting
+  regr_model <- reactive({
+
+    if (input$regression_conty == "lm") {
+      ifListLapply(x = data_do_split(),
+                   fct = lm,
+                   formula = regr_formula(),
+                   na.action = na.omit)
+    } else if (input$regression_conty == "loess") {
+      ifListLapply(x = data_do_split(),
+                   fct = loess,
+                   formula = regr_formula())
+    }
+
+  })
+
+  ## perform predictions
   data_regr <- reactive({
-    if (input$regression_conty != "none") {
-      predict(regr_model(), se.fit = T) |> as_tibble() |> bind_cols(data_do())
+    if (input$regression_conty == "lm") {
+      # $fit and $se.fit
+      ifListLapply(x = regr_model(),
+                   fct = predict,
+                   se.fit = T) |>
+        ifListMapply(fct = bind_cols) |>
+        ifListLapply(fct = transmute,
+                     fit = fit,
+                     se_top = fit + se.fit,
+                     se_bot = fit - se.fit) |>
+        ifListMapply(fct = bind_cols, x = data_do_split()) |>
+        bind_rows()
+    } else if (input$regression_conty == "loess") {
+      # $fit and $se.fit
+      ifListLapply(x = regr_model(),
+                   fct = predict,
+                   se = T) |>
+        ifListMapply(fct = bind_cols) |>
+        ifListLapply(fct = transmute,
+                     fit = fit,
+                     se_top = fit + se.fit,
+                     se_bot = fit - se.fit) |>
+        ifListMapply(fct = bind_cols, x = data_do_split()) |>
+        bind_rows()
     } else {
       data_do()
     }
   })
-
   ## geom_line for drawing the regression predicted values
 
   geom_regression <- reactive({
