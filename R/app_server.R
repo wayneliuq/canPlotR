@@ -11,7 +11,7 @@ app_server <- function( input, output, session ) {
 
   final_ggplot <- reactive({
     ggplot(
-      data = data_regr(),
+      data = data_do(),
       mapping = aes(x = !!xvar_plot(),
                     y = y)
     ) +
@@ -200,7 +200,7 @@ app_server <- function( input, output, session ) {
       geom_dotplot(
         binaxis = "y",
         stackdir = "center",
-        binwidth = 0.01 * diff(range(data_regr()$y)),
+        binwidth = 0.01 * diff(range(data_do()$y)),
         mapping = aes_cust_colourfill(),
         position = position_dodge(0.85)
       ) #fill is shading, color is border (set both)
@@ -240,17 +240,17 @@ app_server <- function( input, output, session ) {
 
   facet_cust <- reactive({
 
-    if (data_regr()$facetHFactor |> is.null() |> suppressWarnings() & data_regr()$facetVFactor |> is.null() |> suppressWarnings()) {
+    if (data_do()$facetHFactor |> is.null() |> suppressWarnings() & data_do()$facetVFactor |> is.null() |> suppressWarnings()) {
       facet_grid(
         cols = NULL,
         rows = NULL
       )
-    } else if (data_regr()$facetVFactor |> is.null() |> suppressWarnings()) {
+    } else if (data_do()$facetVFactor |> is.null() |> suppressWarnings()) {
       facet_grid(
         cols = facetHFactor |> factor(levels = facet_hvar_levels()) |> vars(),
         scales = "fixed"
       )
-    } else if (data_regr()$facetHFactor |> is.null() |> suppressWarnings()) {
+    } else if (data_do()$facetHFactor |> is.null() |> suppressWarnings()) {
       facet_grid(
         rows = facetVFactor |> factor(levels = facet_vvar_levels()) |> vars(),
         scales = "fixed"
@@ -318,34 +318,39 @@ app_server <- function( input, output, session ) {
 
   })
 
-  #### regression logics ####
-  ## perform regression on split data ##
-  data_do_split <- reactive({
-    if (any(grepl("Factor", colnames(data_do())))) {
-      data_do() |>
-        group_by(
-          across(
-            all_of(
-              grep("Factor", colnames(data_do()), value = T)
-            )
-          )
-        ) |>
-        group_split()
-    } else {data_do() |> group_split()}
+  ## later build some error handling in case there is nothing left after filter
+  regr_data_filterx <- reactive({
+    if (input$xtrans %in% c("log10", "log2", "log", "logit", "probit")) {
+      data_do() |> filter(x > 0)
+    } else if (input$xtrans %in% c("sqrt")) {
+      data_do() |> filter(x >= 0)
+    } else {data_do()}
   })
 
-  ## function to apply prediction to split tables ##
-  ifListLapply <- function(x, fct, ...) {
-    if ("list" %in% class(x)) {
-      lapply(FUN = fct, x, ...) |> suppressWarnings()
-    } else {match.fun(fct)(x, ...)  |> suppressWarnings()}
-  }
+  regr_data_filtery <- reactive({
+    if (input$ytrans %in% c("log10", "log2", "log", "logit", "probit")) {
+      regr_data_filterx() |> filter(y > 0)
+    } else if (input$ytrans %in% c("sqrt")) {
+      regr_data_filterx() |> filter(y >= 0)
+    } else {regr_data_filterx()}
+  })
 
-  ifListMapply <- function(x, fct, ...) {
-    if ("list" %in% class(x)) {
-      mapply(FUN = fct, x, ..., SIMPLIFY = F)
-    } else {match.fun(fct)(x, ...)}
-  }
+  #### regression logics ####
+  ## perform regression on split data ##
+  regrdf_group <- reactive({
+    data_do() |>
+      group_by(
+        across(
+          all_of(
+            grep("Factor", colnames(regr_data_filtery()), value = T)
+          )
+        )
+      )
+  })
+
+  regrdf_split <- reactive({
+    regrdf_group() |>group_split()
+  })
 
   ## function to generate formula for x and y ##
   formula_x <- function() {
@@ -372,7 +377,6 @@ app_server <- function( input, output, session ) {
     }
   }
 
-
   regr_formula <- reactive({
     paste0(
       formula_y(),
@@ -385,66 +389,129 @@ app_server <- function( input, output, session ) {
   regr_model <- reactive({
 
     if (input$regression_conty == "lm") {
-      ifListLapply(x = data_do_split(),
-                   fct = lm,
-                   formula = regr_formula(),
-                   na.action = na.omit)
+
+      lapply(
+        X = regrdf_split(),
+        FUN = lm,
+        formula = regr_formula()
+      )
+
     } else if (input$regression_conty == "loess") {
-      ifListLapply(x = data_do_split(),
-                   fct = loess,
-                   formula = regr_formula())
+
+      lapply(
+        X = regrdf_split(),
+        FUN = loess,
+        formula = regr_formula()
+      )
+
     }
 
   })
 
   ## perform predictions
-  data_regr <- reactive({
-    if (input$regression_conty == "lm") {
-      # $fit and $se.fit
-      ifListLapply(x = regr_model(),
-                   fct = predict,
-                   se.fit = T) |>
-        ifListMapply(fct = bind_cols) |>
-        ifListLapply(fct = transmute,
-                     fit = fit,
-                     se_top = fit + se.fit,
-                     se_bot = fit - se.fit) |>
-        ifListMapply(fct = bind_cols, x = data_do_split()) |>
-        bind_rows()
-    } else if (input$regression_conty == "loess") {
-      # $fit and $se.fit
-      ifListLapply(x = regr_model(),
-                   fct = predict,
-                   se = T) |>
-        ifListMapply(fct = bind_cols) |>
-        ifListLapply(fct = transmute,
-                     fit = fit,
-                     se_top = fit + se.fit,
-                     se_bot = fit - se.fit) |>
-        ifListMapply(fct = bind_cols, x = data_do_split()) |>
-        bind_rows()
+
+  transvar <- function(fct, x) {
+    if (fct %in% c("log10", "log2", "log", "sqrt", "exp")) {
+      match.fun(fct)(x)
+    } else if (fct == "logit") {
+      qlogis(x)
+    } else if (fct == "probit") {
+      qnorm(x)
     } else {
-      data_do()
+      x
     }
+  }
+
+  inversetrans <- function(fct, x) {
+    if (fct == "log10") {
+      10^x
+    } else if (fct == "log2") {
+      2^x
+    } else if (fct == "log") {
+      exp(x)
+    } else if (fct == "sqrt") {
+      x^2
+    } else if (fct == "exp") {
+      log(x)
+    } else if (fct == "logit") {
+      plogis(x)
+    } else if (fct == "probit") {
+      pnorm(x)
+    } else {
+      x
+    }
+  }
+
+  addsubtract <- function(x, y) {c(x+y, x-y)}
+
+  ## inverse of exp is log
+  regrdf <- reactive({
+
+    ## later this might depend on the consumer
+    nrow <- 50
+
+    ## empty df
+    dfi <- rep(list(tibble()), length(regrdf_split()))
+
+    ## group data variables
+
+
+    for (i in seq_along(regrdf_split())) {
+      ## x values depend on transformations
+      x_expand <- seq(
+        from = regrdf_split()[[i]]$x |> transvar(fct = input$transx) |> min(),
+        to = regrdf_split()[[i]]$x |> transvar(fct = input$transx) |> max(),
+        length.out = nrow
+      )
+
+      ## fill table
+      dfi <- tibble(
+        x = inversetrans(fct = input$tranx, x = x_expand),
+        y = 0,
+        y_setop = 0,
+        y_sebot = 0,
+        data_keys[i,]
+      )
+
+      ## predict function per each regression_cont
+      if (input$regression_conty == "lm") {
+        predi <- predict(regr_model()[[i]], se.fit = T)
+
+        dfi$y <- inversetrans(fct = input$ytrans, predi$fit)
+        dfi$y_setop <- addsubtract(predi$fit, predi$se.fit) |> inversetrans(fct = input$ytrans) |> min()
+        dfi$y_sebot <- addsubtract(predi$fit, predi$se.fit) |> inversetrans(fct = input$ytrans) |> max()
+      } else if (input$regression_conty == "loess") {
+        predi <- predict(regr_model()[[i]], se = T)
+
+        dfi$y <- inversetrans(fct = input$ytrans, predi$fit)
+        dfi$y_setop <- addsubtract(predi$fit, predi$se.fit) |> inversetrans(fct = input$ytrans) |> min()
+        dfi$y_sebot <- addsubtract(predi$fit, predi$se.fit) |> inversetrans(fct = input$ytrans) |> max()
+      }
+    }
+
+    return(bind_rows(dfi))
   })
+
   ## geom_line for drawing the regression predicted values
 
   geom_regression <- reactive({
 
     if (input$regression_conty != "none") {
 
-      if (data_regr()$colorFactor |> is.null() |> suppressWarnings()) {
+      if (data_do()$colorFactor |> is.null() |> suppressWarnings()) {
         geom_line(
           mapping = aes(
-            y = fit
-          )
+            y = y
+          ),
+          data = regrdf()
         )
       } else {
         geom_line(
           mapping = aes(
-            y = fit,
+            y = y,
             color = colorFactor
-          )
+          ),
+          data = regrdf()
         )
       }
 
@@ -786,24 +853,24 @@ app_server <- function( input, output, session ) {
   }
 
   x_factorlevels_default <- reactive({
-    GetColLevelsCatch(data_regr(), "x", "NA")
+    GetColLevelsCatch(data_do(), "x", "NA")
   })
 
   # y_factorlevels_default <- reactive({
-  #   GetColLevelsCatch(data_regr(), "y", "NA")
+  #   GetColLevelsCatch(data_do(), "y", "NA")
   # })
 
   color_factorlevels_default <- reactive({
-    GetColLevelsCatch(data_regr(), "colorFactor", "NA")
+    GetColLevelsCatch(data_do(), "colorFactor", "NA")
   })
 
   facet_h_factorlevels_default <- reactive({
-    GetColLevelsCatch(data_regr(), "facetHFactor", "NA")
+    GetColLevelsCatch(data_do(), "facetHFactor", "NA")
 
   })
 
   facet_v_factorlevels_default <- reactive({
-    GetColLevelsCatch(data_regr(), "facetVFactor", "NA")
+    GetColLevelsCatch(data_do(), "facetVFactor", "NA")
   })
   #### reorder factor levels observer ####
 
@@ -849,7 +916,7 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
-    data_regr()
+    regrdf()
   })
 
   output$debug2 <- renderText({
