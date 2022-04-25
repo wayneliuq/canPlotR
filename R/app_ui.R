@@ -375,8 +375,8 @@ app_ui <- function(request) {
                         "none",
                         "linear regression" = "lm",
                         "local polynomial (smooth)" = "loess",
-                        "quadratic" = "loess_quadratic",
-                        "cubic" = "loess_cubic",
+                        "quadratic" = "quadratic",
+                        "cubic" = "cubic",
                         "logistic regression" = "glm_logistic"
                       )
                     )

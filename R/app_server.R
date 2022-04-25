@@ -349,7 +349,7 @@ app_server <- function( input, output, session ) {
   })
 
   regrdf_split <- reactive({
-    regrdf_group() |>group_split()
+    regrdf_group() |> group_split()
   })
 
   ## function to generate formula for x and y ##
@@ -401,84 +401,52 @@ app_server <- function( input, output, session ) {
       lapply(
         X = regrdf_split(),
         FUN = loess,
-        formula = regr_formula()
+        formula = regr_formula(),
+        span = 0.5
       )
 
+    } else if (input$regression_conty == "quadratic") {
+
+      lapply(
+        X = regrdf_split(),
+        FUN = loess,
+        formula = regr_formula(),
+        span = 1,
+        degree = 2
+      )
     }
 
   })
 
-  ## perform predictions
-
-  transvar <- function(fct, x) {
-    if (fct %in% c("log10", "log2", "log", "sqrt", "exp")) {
-      match.fun(fct)(x)
-    } else if (fct == "logit") {
-      qlogis(x)
-    } else if (fct == "probit") {
-      qnorm(x)
-    } else {
-      x
-    }
-  }
-
-  inversetrans <- function(fct, x) {
-    if (fct == "log10") {
-      10^x
-    } else if (fct == "log2") {
-      2^x
-    } else if (fct == "log") {
-      exp(x)
-    } else if (fct == "sqrt") {
-      x^2
-    } else if (fct == "exp") {
-      log(x)
-    } else if (fct == "logit") {
-      plogis(x)
-    } else if (fct == "probit") {
-      pnorm(x)
-    } else {
-      x
-    }
-  }
-
   ## df for regression plotting
+
   regrdf <- reactive({
 
     if (input$regression_conty != "none") {
       nrow <- 50
 
+      data_key <- group_keys(regrdf_group())
+
       ## empty df
       dfi <- rep(list(tibble()), length(regrdf_split()))
 
       ## group data variables
-
-
       for (i in seq_along(regrdf_split())) {
         ## x values depend on transformations
         x_expand <- seq(
-          from = regrdf_split()[[i]]$x |> transvar(fct = input$transx) |> min(),
-          to = regrdf_split()[[i]]$x |> transvar(fct = input$transx) |> max(),
+          from = regrdf_split()[[i]]$x |> transvar(fct = input$xtrans) |> min(),
+          to = regrdf_split()[[i]]$x |> transvar(fct = input$xtrans) |> max(),
           length.out = nrow
         )
 
         ## fill table
         dfi[[i]] <- tibble(
-          x = inversetrans(fct = input$tranx, x = x_expand),
+          x = inversetrans(fct = input$xtrans, x = x_expand),
           y = 0,
           y_setop = 0,
           y_sebot = 0,
-          data_keys[i,]
+          data_key[i,]
         )
-
-        ## function for finding min and max of predi fit and se
-        seFind <- function(fit, se, fct, trans) {
-          mapply(
-            match.fun(fct),
-            inversetrans(fct = trans, x = fit - se),
-            inversetrans(fct = trans, x = fit + se)
-          )
-        }
 
         ## predict function per each regression_cont
         if (input$regression_conty == "lm") {
@@ -487,7 +455,7 @@ app_server <- function( input, output, session ) {
           dfi[[i]]$y <- inversetrans(fct = input$ytrans, predi$fit)
           dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
           dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
-        } else if (input$regression_conty == "loess") {
+        } else if (input$regression_conty %in% c("loess", "quadratic")) {
           predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se = T)
 
           dfi[[i]]$y <- inversetrans(fct = input$ytrans, predi$fit)
@@ -497,6 +465,7 @@ app_server <- function( input, output, session ) {
       }
 
       return(bind_rows(dfi))
+
     } else {
       data_do()
     }
@@ -927,11 +896,15 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
-    regrdf()
+
   })
 
   output$debug2 <- renderText({
-    "test"
+    seq(
+      from = regrdf_split()[[1]]$x |> transvar(fct = input$xtrans) |> min(),
+      to = regrdf_split()[[1]]$x |> transvar(fct = input$xtrans) |> max(),
+      length.out = 50
+    )
   })
 
   #### session end scripts ####
