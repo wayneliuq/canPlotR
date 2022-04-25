@@ -338,7 +338,7 @@ app_server <- function( input, output, session ) {
   #### regression logics ####
   ## perform regression on split data ##
   regrdf_group <- reactive({
-    data_do() |>
+    regr_data_filtery() |>
       group_by(
         across(
           all_of(
@@ -442,54 +442,65 @@ app_server <- function( input, output, session ) {
     }
   }
 
-  addsubtract <- function(x, y) {c(x+y, x-y)}
-
-  ## inverse of exp is log
+  ## df for regression plotting
   regrdf <- reactive({
 
-    ## later this might depend on the consumer
-    nrow <- 50
+    if (input$regression_conty != "none") {
+      nrow <- 50
 
-    ## empty df
-    dfi <- rep(list(tibble()), length(regrdf_split()))
+      ## empty df
+      dfi <- rep(list(tibble()), length(regrdf_split()))
 
-    ## group data variables
+      ## group data variables
 
 
-    for (i in seq_along(regrdf_split())) {
-      ## x values depend on transformations
-      x_expand <- seq(
-        from = regrdf_split()[[i]]$x |> transvar(fct = input$transx) |> min(),
-        to = regrdf_split()[[i]]$x |> transvar(fct = input$transx) |> max(),
-        length.out = nrow
-      )
+      for (i in seq_along(regrdf_split())) {
+        ## x values depend on transformations
+        x_expand <- seq(
+          from = regrdf_split()[[i]]$x |> transvar(fct = input$transx) |> min(),
+          to = regrdf_split()[[i]]$x |> transvar(fct = input$transx) |> max(),
+          length.out = nrow
+        )
 
-      ## fill table
-      dfi <- tibble(
-        x = inversetrans(fct = input$tranx, x = x_expand),
-        y = 0,
-        y_setop = 0,
-        y_sebot = 0,
-        data_keys[i,]
-      )
+        ## fill table
+        dfi[[i]] <- tibble(
+          x = inversetrans(fct = input$tranx, x = x_expand),
+          y = 0,
+          y_setop = 0,
+          y_sebot = 0,
+          data_keys[i,]
+        )
 
-      ## predict function per each regression_cont
-      if (input$regression_conty == "lm") {
-        predi <- predict(regr_model()[[i]], se.fit = T)
+        ## function for finding min and max of predi fit and se
+        seFind <- function(fit, se, fct, trans) {
+          mapply(
+            match.fun(fct),
+            inversetrans(fct = trans, x = fit - se),
+            inversetrans(fct = trans, x = fit + se)
+          )
+        }
 
-        dfi$y <- inversetrans(fct = input$ytrans, predi$fit)
-        dfi$y_setop <- addsubtract(predi$fit, predi$se.fit) |> inversetrans(fct = input$ytrans) |> min()
-        dfi$y_sebot <- addsubtract(predi$fit, predi$se.fit) |> inversetrans(fct = input$ytrans) |> max()
-      } else if (input$regression_conty == "loess") {
-        predi <- predict(regr_model()[[i]], se = T)
+        ## predict function per each regression_cont
+        if (input$regression_conty == "lm") {
+          predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se.fit = T)
 
-        dfi$y <- inversetrans(fct = input$ytrans, predi$fit)
-        dfi$y_setop <- addsubtract(predi$fit, predi$se.fit) |> inversetrans(fct = input$ytrans) |> min()
-        dfi$y_sebot <- addsubtract(predi$fit, predi$se.fit) |> inversetrans(fct = input$ytrans) |> max()
+          dfi[[i]]$y <- inversetrans(fct = input$ytrans, predi$fit)
+          dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
+          dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
+        } else if (input$regression_conty == "loess") {
+          predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se = T)
+
+          dfi[[i]]$y <- inversetrans(fct = input$ytrans, predi$fit)
+          dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
+          dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
+        }
       }
+
+      return(bind_rows(dfi))
+    } else {
+      data_do()
     }
 
-    return(bind_rows(dfi))
   })
 
   ## geom_line for drawing the regression predicted values
@@ -920,7 +931,7 @@ app_server <- function( input, output, session ) {
   })
 
   output$debug2 <- renderText({
-    regr_formula() |> deparse()
+    "test"
   })
 
   #### session end scripts ####
