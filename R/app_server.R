@@ -320,18 +320,22 @@ app_server <- function( input, output, session ) {
 
   ## later build some error handling in case there is nothing left after filter
   regr_data_filterx <- reactive({
-    if (input$xtrans %in% c("log10", "log2", "log", "logit", "probit")) {
+    if (input$xtrans %in% c("log10", "log2", "log")) {
       data_do() |> filter(x > 0)
     } else if (input$xtrans %in% c("sqrt")) {
       data_do() |> filter(x >= 0)
+    } else if (input$xtrans %in% c("logit", "probit")) {
+      data_do() |> filter(x > 0, x < 1)
     } else {data_do()}
   })
 
   regr_data_filtery <- reactive({
-    if (input$ytrans %in% c("log10", "log2", "log", "logit", "probit")) {
+    if (input$ytrans %in% c("log10", "log2", "log")) {
       regr_data_filterx() |> filter(y > 0)
     } else if (input$ytrans %in% c("sqrt")) {
       regr_data_filterx() |> filter(y >= 0)
+    } else if (input$ytrans %in% c("logit", "probit") | input$regression_conty %in% c("glm_binomial")) {
+      regr_data_filterx() |> filter(y > 0, y < 1)
     } else {regr_data_filterx()}
   })
 
@@ -378,17 +382,34 @@ app_server <- function( input, output, session ) {
   }
 
   regr_formula <- reactive({
-    paste0(
-      formula_y(),
-      " ~ ",
-      formula_x()
-    ) |> as.formula()
+    if (input$regression_conty == "quadratic") {
+      paste0(
+        formula_y(),
+        " ~ poly(",
+        formula_x(),
+        ", degree = 2, raw = TRUE)"
+      ) |> as.formula()
+    } else if (input$regression_conty == "cubic") {
+      paste0(
+        formula_y(),
+        " ~ poly(",
+        formula_x(),
+        ", degree = 3, raw = TRUE)"
+      ) |> as.formula()
+    } else {
+        paste0(
+          formula_y(),
+          " ~ ",
+          formula_x()
+        ) |> as.formula()
+    }
+
   })
 
   ## perform model fitting
   regr_model <- reactive({
 
-    if (input$regression_conty == "lm") {
+    if (input$regression_conty %in% c("lm", "quadratic", "cubic")) {
 
       lapply(
         X = regrdf_split(),
@@ -405,15 +426,16 @@ app_server <- function( input, output, session ) {
         span = 0.5
       )
 
-    } else if (input$regression_conty == "quadratic") {
+    } else if (input$regression_conty == "glm_binomial") {
 
       lapply(
         X = regrdf_split(),
-        FUN = loess,
+        FUN = glm,
         formula = regr_formula(),
-        span = 1,
-        degree = 2
+        family = binomial
+
       )
+
     }
 
   })
@@ -449,13 +471,13 @@ app_server <- function( input, output, session ) {
         )
 
         ## predict function per each regression_cont
-        if (input$regression_conty == "lm") {
+        if (input$regression_conty %in% c("lm", "quadratic", "cubic", "glm_binomial")) {
           predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se.fit = T)
 
           dfi[[i]]$y <- inversetrans(fct = input$ytrans, predi$fit)
           dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
           dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
-        } else if (input$regression_conty %in% c("loess", "quadratic")) {
+        } else if (input$regression_conty %in% c("loess")) {
           predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se = T)
 
           dfi[[i]]$y <- inversetrans(fct = input$ytrans, predi$fit)
