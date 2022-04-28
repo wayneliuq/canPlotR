@@ -59,57 +59,7 @@ app_ui <- function(request) {
 
                 ## select data set
                 fluidRow(
-
-                  checkboxInput(
-                    inputId = "use_example_data",
-                    label = "Use example data",
-                    value = F
-                  ),
-
-                  conditionalPanel(
-                    condition  = "input.use_example_data",
-                    selectInput(
-                      inputId = "example_dataset",
-                      label = "Select example dataset",
-                      choices = c(
-                        "Example dose-response" = 1,
-                        "Hair Eye Color" = 2,
-                        "Chick Weight" = 3
-                      )
-                    )
-                  ),
-
-                  # selectInput( "Choose data source",
-                  #             inputId = "input_data_type",
-                  #             choices = c(
-                  #               "Upload Data" = 1,
-                  #               "Example Data" = 2
-                  #             ),
-                  #           selected = 1),
-
-                  ## upload box for user data
-                  conditionalPanel(
-                    condition = "input.use_example_data == false",
-                    fileInput(inputId = "data_user",
-                              label = "Upload your data",
-                              accept = c(".csv", ".txt", ".xls", ".xlsx"),
-                              placeholder = "csv, txt, xls, and xlsx files") |>
-                      prompter::add_prompt(
-                        position = "right",
-                        message = "Supported filetypes include 'xls', 'xlsx', 'csv', and 'txt'.
-						                      By default, only the first sheet of Excel spreadsheets will be loaded.",
-                        size = "large")
-                  ),
-
-                  ## action button bound to data loading
-                  actionButton(inputId = "data_load",
-                               label = "Load Data!",
-                               class = "btn-success") |>
-                    prompter::add_prompt(
-                      position = "right",
-                      message = "Click here to load the data you selected.",
-                      size = "medium"
-                    )
+                  mod_data_load_ui("data_load_1")
                 )
               ),
 

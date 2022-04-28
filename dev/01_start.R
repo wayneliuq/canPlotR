@@ -25,7 +25,7 @@ golem::fill_desc(
   author_first_name = "Qiang (Wayne)", # Your First Name
   author_last_name = "Liu", # Your Last Name
   author_email = "wayneliuq@gmail.com", # Your Email
-  repo_url = NULL # The URL of the GitHub Repo (optional) 
+  repo_url = "https://github.com/wayneliuq/canPlotR" # The URL of the GitHub Repo (optional) 
 )     
 
 ## Set {golem} options ----

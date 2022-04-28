@@ -6,6 +6,9 @@
 #' @noRd
 app_server <- function( input, output, session ) {
 
+  #### module servers ####
+  mod_data_load <- mod_data_load_server("data_load_1")
+
   #### final output plot ####
   # this is the ggplot2 function which will render the final plot
 
@@ -527,29 +530,29 @@ app_server <- function( input, output, session ) {
   ## data is bound to button since reading data can be slow
   data_get <- reactive({
 
-    if (!input$use_example_data) {
+    if (!mod_data_load$use_example_data()) {
 
       ## find the file type of the user uploaded data
 
-      if (tools::file_ext(input$data_user$datapath) == "xls") {
-        readxl::read_xls(input$data_user$datapath)
-      } else if (tools::file_ext(input$data_user$datapath) == "xlsx") {
-        readxl::read_xlsx(input$data_user$datapath)
-      } else if (tools::file_ext(input$data_user$datapath) %in% c("txt", "csv")) {
-        readr::read_delim(input$data_user$datapath)
+      if (tools::file_ext(mod_data_load$data_user_path()) == "xls") {
+        readxl::read_xls(mod_data_load$data_user_path())
+      } else if (tools::file_ext(mod_data_load$data_user_path()) == "xlsx") {
+        readxl::read_xlsx(mod_data_load$data_user_path())
+      } else if (tools::file_ext(mod_data_load$data_user_path()) %in% c("txt", "csv")) {
+        readr::read_delim(mod_data_load$data_user_path())
       }
 
-    } else if (input$example_dataset == 1) {
+    } else if (mod_data_load$example_dataset() == 1) {
       data("example_dr", envir = environment()); example_dr
-    } else if (input$example_dataset == 2) {
+    } else if (mod_data_load$example_dataset() == 2) {
       data("example_HairEye", envir = environment()); example_HairEye
-    } else if (input$example_dataset == 3) {
+    } else if (mod_data_load$example_dataset() == 3) {
       data("example_ChickWeight", envir = environment()); example_ChickWeight
     } else {
         tibble()
     }
   }) |>
-    bindEvent(input$data_load)
+    bindEvent(mod_data_load$data_load_btn())# bindEvent(input$data_load)
 
   #### summarise data ####
   ## later modify group_by so it incorporates facets, and mappings e.g. (color/fill)
@@ -705,7 +708,7 @@ app_server <- function( input, output, session ) {
         format and upload a new file."
       )
     }
-  }) |> bindEvent(input$data_load)
+  }) |> bindEvent(mod_data_load$data_load_btn())# bindEvent(input$data_load)
 
   #### format x or y as factors and choose order ####
 
@@ -922,11 +925,8 @@ app_server <- function( input, output, session ) {
   })
 
   output$debug2 <- renderText({
-    seq(
-      from = regrdf_split()[[1]]$x |> transvar(fct = input$xtrans) |> min(),
-      to = regrdf_split()[[1]]$x |> transvar(fct = input$xtrans) |> max(),
-      length.out = 50
-    )
+    mod_data_load$example_dataset()
+
   })
 
   #### session end scripts ####
