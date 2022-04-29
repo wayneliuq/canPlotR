@@ -42,7 +42,6 @@ app_ui <- function(request) {
                 title = "1. Select Data",
 
                 ## plot name
-
                 fluidRow(
                   textInput(inputId = "plotid",
                             label = "Plot Name",
@@ -67,244 +66,208 @@ app_ui <- function(request) {
                 title = "2. Choose Variables",
 
                 #### choose columns to plot ####
-
+                mod_choose_plotxy_ui("choose_plotxy_1")
                 ## choose x and y
-                fluidRow(
-                  hr(),
-                  p(strong("Choose x and y variables")),
+                # fluidRow(
+                #   hr(),
+                #   p(strong("Choose x and y variables")),
+                #
+                #   column(
+                #     width = 6,
+                #     selectInput(inputId = "xvar",
+                #                 label = "Choose x variable",
+                #                 choices = "No data loaded!",
+                #                 selected = 1,
+                #                 selectize = F,
+                #                 multiple = F,
+                #                 size = 4)
+                #   ),
+                #   column(
+                #     width = 6,
+                #     selectInput(inputId = "yvar",
+                #                 label = "Choose y variable",
+                #                 choices = "No data loaded!",
+                #                 selected = 1,
+                #                 selectize = F,
+                #                 multiple = F,
+                #                 size = 4)
+                #   )
+                # ),
 
-                  column(
-                    width = 6,
-                    selectInput(inputId = "xvar",
-                                label = "Choose x variable",
-                                choices = "No data loaded!",
-                                selected = 1,
-                                selectize = F,
-                                multiple = F,
-                                size = 4)
-                  ),
-                  column(
-                    width = 6,
-                    selectInput(inputId = "yvar",
-                                label = "Choose y variable",
-                                choices = "No data loaded!",
-                                selected = 1,
-                                selectize = F,
-                                multiple = F,
-                                size = 4)
-                  )
-                ),
+                # #### asfactor and transformations ####
+                # fluidRow(
+                #   column(
+                #     width = 6,
+                #
+                #     ## select transformation for numeric x variable
+                #     shinyWidgets::pickerInput(
+                #       inputId = "xtrans",
+                #       label = "x-axis transformation",
+                #       choices = trans_continuous,
+                #       selected = 1
+                #     ),
+                #
+                #     ## format x as factor
+                #     conditionalPanel(
+                #       condition = "output.xvar_isnumeric",
+                #       checkboxInput(
+                #         inputId = "x_asfactor",
+                #         label = "Format as categorical",
+                #         value = F
+                #       ) |> prompter::add_prompt(
+                #         position = "right",
+                #         size = "large",
+                #         message = "If the column you selected as the x variable
+                #         conists of only numbers, it will be assumed to be a
+                #         continuous variable. Select this box if you want to format
+                #         the x-variable as a categorical variable (factor)."
+                #       )
+                #     ),
+                #
+                #     # reorder categorical x, hide in dropdown since sometimes it's huge
+                #     conditionalPanel(
+                #       condition = "output.xvar_isfactor",
+                #       shinyWidgets::dropdown(
+                #         status = "primary",
+                #         label = "re-order x categories",
+                #         shinyjqui::orderInput(
+                #           inputId = "xorder",
+                #           label = NULL,
+                #           items = c("NA"),
+                #           item_class = "primary"
+                #         )
+                #       ) |> prompter::add_prompt(
+                #              position = "right",
+                #              size = "large",
+                #              message = "Click to open a menu which allows you to
+                #              reorder the categories. Drag to re-order."
+                #            )
+                #     )
+                #
+                #   ),
+                #
+                #   column(
+                #     width = 6,
+                #
+                #     ## select transformation for numeric y variable
+                #     shinyWidgets::pickerInput(
+                #       inputId = "ytrans",
+                #       label = "y-axis transformation",
+                #       choices = trans_continuous,
+                #       selected = 1
+                #     )
+                #
+                #   )
+                # ),
 
-                #### asfactor and transformations ####
-                fluidRow(
-                  column(
-                    width = 6,
-
-                    ## select transformation for numeric x variable
-                    shinyWidgets::pickerInput(
-                      inputId = "xtrans",
-                      label = "x-axis transformation",
-                      choices = trans_continuous,
-                      selected = 1
-                    ),
-
-                    ## format x as factor
-                    conditionalPanel(
-                      condition = "output.xvar_isnumeric",
-                      checkboxInput(
-                        inputId = "x_asfactor",
-                        label = "Format as categorical",
-                        value = F
-                      ) |> prompter::add_prompt(
-                        position = "right",
-                        size = "large",
-                        message = "If the column you selected as the x variable
-                        conists of only numbers, it will be assumed to be a
-                        continuous variable. Select this box if you want to format
-                        the x-variable as a categorical variable (factor)."
-                      )
-                    ),
-
-                    # reorder categorical x, hide in dropdown since sometimes it's huge
-                    conditionalPanel(
-                      condition = "output.xvar_isfactor",
-                      shinyWidgets::dropdown(
-                        status = "primary",
-                        label = "re-order x categories",
-                        shinyjqui::orderInput(
-                          inputId = "xorder",
-                          label = NULL,
-                          items = c("NA"),
-                          item_class = "primary"
-                        )
-                      ) |> prompter::add_prompt(
-                             position = "right",
-                             size = "large",
-                             message = "Click to open a menu which allows you to
-                             reorder the categories. Drag to re-order."
-                           )
-                    )
-
-                  ),
-
-                  column(
-                    width = 6,
-
-                    ## format y as factor
-                    # conditionalPanel(
-                    #   condition = "output.yvar_isnumeric",
-                    #   checkboxInput(
-                    #     inputId = "y_asfactor",
-                    #     label = "Format as categorical",
-                    #     value = F
-                    #   ) |> prompter::add_prompt(
-                    #     position = "right",
-                    #     size = "large",
-                    #     message = "If the column you selected as the y variable
-                    #     conists of only numbers, it will be assumed to be a
-                    #     continuous variable. Select this box if you want to format
-                    #     the x-variable as a categorical variable (factor)."
-                    #   )
-                    # ),
-
-                    ## select transformation for numeric y variable
-                    shinyWidgets::pickerInput(
-                      inputId = "ytrans",
-                      label = "y-axis transformation",
-                      choices = trans_continuous,
-                      selected = 1
-                    )
-
-                    ## reorder categorical x, hide in dropdown since sometimes it's huge
-                    # conditionalPanel(
-                    #   condition = "output.yvar_isfactor",
-                    #   shinyWidgets::dropdown(
-                    #     status = "primary",
-                    #     label = "re-order y categories",
-                    #     shinyjqui::orderInput(
-                    #       inputId = "yorder",
-                    #       label = NULL,
-                    #       items = c("NA"),
-                    #       item_class = "primary"
-                    #     )
-                    #   ) |> prompter::add_prompt(
-                    #          position = "right",
-                    #          size = "large",
-                    #          message = "Click to open a menu which allows you to
-                    #          reorder the categories. Drag to re-order."
-                    #        )
-                    # )
-                  )
-                ),
-
-                #### split by color (factor) ####
-
-                fluidRow(
-                  p(strong("Group data by color")),
-
-                  p("Group your data by a variable, which will be coerced to a
-                  categorical variable. Some plots, such as filled density plots,
-                  cannot be grouped."),
-
-                  shinyWidgets::pickerInput(
-                    inputId = "color_factor_var",
-                    label = NULL,
-                    choices = "none",
-                    multiple = F,
-                    selected = 1
-                  ),
-
-                  conditionalPanel(
-                    condition = "input.color_factor_var !== 'none'",
-                    shinyWidgets::dropdown(
-                      status = "primary",
-                      label = "re-order grouping variable",
-                      shinyjqui::orderInput(
-                        inputId = "color_factor_var_order",
-                        label = NULL,
-                        items = c("NA"),
-                        item_class = "primary"
-                      )
-                    ) |> prompter::add_prompt(
-                      position = "right",
-                      size = "large",
-                      message = "You can re-order the grouping variable by opening
-                      this dropdown menu and dragging the items to the desired order."
-                    )
-                  )
-                ),
-
-                #### split data by facet ####
-
-                fluidRow(
-
-                  p(strong("Split plot")),
-
-                  p("Split your data into panels (facets) by categorical
-                  variables. Numeric variables will be coerced to categories."),
-
-                  column(
-                    width = 6,
-                    p(em("horizontal split (columns)")),
-
-                    shinyWidgets::pickerInput(
-                      inputId = "facet_hvar",
-                      choices = "none",
-                      selected = 1
-                    ),
-
-                    conditionalPanel(
-                      condition = "input.facet_hvar !== 'none'",
-                      shinyWidgets::dropdown(
-                        status = "primary",
-                        label = "re-order horizontal panels",
-                        size = "sm",
-                        shinyjqui::orderInput(
-                          inputId = "facet_hvar_order",
-                          items = "NA",
-                          label = NULL
-                        )
-                      ) |> prompter::add_prompt(
-                        position = "right",
-                        size = "large",
-                        message = "You can re-order the horizontal panel by opening
-                        this dropdown menu and dragging the items to the desired order."
-                      )
-                    )
-
-                  ),
-
-                  column(
-                    width = 6,
-                    p(em("vertical split (rows)")),
-
-                    shinyWidgets::pickerInput(
-                      inputId = "facet_vvar",
-                      choices = "none",
-                      selected = 1
-                    ),
-
-                    conditionalPanel(
-                      condition = "input.facet_vvar !== 'none'",
-                      shinyWidgets::dropdown(
-                        status = "primary",
-                        label = "re-order vertical panels",
-                        size = "sm",
-                        shinyjqui::orderInput(
-                          inputId = "facet_vvar_order",
-                          items = "NA",
-                          label = NULL
-                        )
-                      ) |> prompter::add_prompt(
-                        position = "right",
-                        size = "large",
-                        message = "You can re-order the vertical panel by opening
-                        this dropdown menu and dragging the items to the desired order."
-                      )
-                    )
-
-                  )
-                )
+                # #### split by color (factor) ####
+                #
+                # fluidRow(
+                #   p(strong("Group data by color")),
+                #
+                #   p("Group your data by a variable, which will be coerced to a
+                #   categorical variable. Some plots, such as filled density plots,
+                #   cannot be grouped."),
+                #
+                #   shinyWidgets::pickerInput(
+                #     inputId = "color_factor_var",
+                #     label = NULL,
+                #     choices = "none",
+                #     multiple = F,
+                #     selected = 1
+                #   ),
+                #
+                #   conditionalPanel(
+                #     condition = "input.color_factor_var !== 'none'",
+                #     shinyWidgets::dropdown(
+                #       status = "primary",
+                #       label = "re-order grouping variable",
+                #       shinyjqui::orderInput(
+                #         inputId = "color_factor_var_order",
+                #         label = NULL,
+                #         items = c("NA"),
+                #         item_class = "primary"
+                #       )
+                #     ) |> prompter::add_prompt(
+                #       position = "right",
+                #       size = "large",
+                #       message = "You can re-order the grouping variable by opening
+                #       this dropdown menu and dragging the items to the desired order."
+                #     )
+                #   )
+                # ),
+                #
+                # #### split data by facet ####
+                #
+                # fluidRow(
+                #
+                #   p(strong("Split plot")),
+                #
+                #   p("Split your data into panels (facets) by categorical
+                #   variables. Numeric variables will be coerced to categories."),
+                #
+                #   column(
+                #     width = 6,
+                #     p(em("horizontal split (columns)")),
+                #
+                #     shinyWidgets::pickerInput(
+                #       inputId = "facet_hvar",
+                #       choices = "none",
+                #       selected = 1
+                #     ),
+                #
+                #     conditionalPanel(
+                #       condition = "input.facet_hvar !== 'none'",
+                #       shinyWidgets::dropdown(
+                #         status = "primary",
+                #         label = "re-order horizontal panels",
+                #         size = "sm",
+                #         shinyjqui::orderInput(
+                #           inputId = "facet_hvar_order",
+                #           items = "NA",
+                #           label = NULL
+                #         )
+                #       ) |> prompter::add_prompt(
+                #         position = "right",
+                #         size = "large",
+                #         message = "You can re-order the horizontal panel by opening
+                #         this dropdown menu and dragging the items to the desired order."
+                #       )
+                #     )
+                #
+                #   ),
+                #
+                #   column(
+                #     width = 6,
+                #     p(em("vertical split (rows)")),
+                #
+                #     shinyWidgets::pickerInput(
+                #       inputId = "facet_vvar",
+                #       choices = "none",
+                #       selected = 1
+                #     ),
+                #
+                #     conditionalPanel(
+                #       condition = "input.facet_vvar !== 'none'",
+                #       shinyWidgets::dropdown(
+                #         status = "primary",
+                #         label = "re-order vertical panels",
+                #         size = "sm",
+                #         shinyjqui::orderInput(
+                #           inputId = "facet_vvar_order",
+                #           items = "NA",
+                #           label = NULL
+                #         )
+                #       ) |> prompter::add_prompt(
+                #         position = "right",
+                #         size = "large",
+                #         message = "You can re-order the vertical panel by opening
+                #         this dropdown menu and dragging the items to the desired order."
+                #       )
+                #     )
+                #
+                #   )
+                # )
 
               ),
 
@@ -665,17 +628,17 @@ golem_add_external_resources <- function(){
 
 #### common functions and variables ####
 ## transform or reorder x and y (numeric vs factor)
-trans_continuous <- c(
-  "none" = "identity",
-  "reverse",
-  "log10",
-  "log2",
-  "natural log" = "log",
-  "sqrt",
-  "exp",
-  "logit",
-  "probit",
-  "date",
-  "time hms" = "hms",
-  "time POSIX" = "time"
-)
+# trans_continuous <- c(
+#   "none" = "identity",
+#   "reverse",
+#   "log10",
+#   "log2",
+#   "natural log" = "log",
+#   "sqrt",
+#   "exp",
+#   "logit",
+#   "probit",
+#   "date",
+#   "time hms" = "hms",
+#   "time POSIX" = "time"
+# )

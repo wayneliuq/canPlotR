@@ -7,10 +7,24 @@
 app_server <- function( input, output, session ) {
 
   #### module servers ####
+
+  ## ui inputs for loading user data or choosing example dataset
   mod_data_load <- mod_data_load_server("data_load_1")
 
+  mod_choose_plotxy <- mod_choose_plotxy_server(
+    "choose_plotxy_1",
+    data_load_btn = mod_data_load$data_load_btn,
+    x_factorlevels = x_factorlevels_default,
+    data_vars = data_vars,
+    data_vars_numeric = data_vars_numeric,
+    color_factorlevels = color_factorlevels_default,
+    facet_h_factorlevels = facet_h_factorlevels_default,
+    facet_v_factorlevels = facet_v_factorlevels_default
+
+  )
+
   #### final output plot ####
-  # this is the ggplot2 function which will render the final plot
+  ## this is the ggplot2 function which will render the final plot
 
   final_ggplot <- reactive({
     ggplot(
@@ -38,10 +52,10 @@ app_server <- function( input, output, session ) {
            color = legend_lab()) +
 
       #x-axis label
-      xlab(input$xvar) +
+      xlab(mod_choose_plotxy$xvar()) +
 
       #y-axis label
-      ylab(input$yvar) +
+      ylab(mod_choose_plotxy$yvar()) +
 
       # transform the x and y axis depending on user input
       x_scale_trans() +
@@ -91,24 +105,24 @@ app_server <- function( input, output, session ) {
   # automatically take the column title
   # planned feature: allow user to customize it
   legend_lab <- reactive({
-    first(c(input$color_factor_var, input$color_numeric_var))
+    first(c(mod_choose_plotxy$color_factor_var(), input$color_numeric_var))
   })
 
   #### customize type of plot ####
   ## mapping depending on whether color or fill needs to be changed
 
   colorvar_catch <- reactive({
-    if (isTruthy(input$color_factor_var) & isTruthy(input$color_numeric_var) |>
+    if (isTruthy(mod_choose_plotxy$color_factor_var()) & isTruthy(input$color_numeric_var) |>
       tryCatch(error = function(e) F)) {
-        if (input$color_factor_var == "none" & input$color_numeric_var == "none") {
+        if (mod_choose_plotxy$color_factor_var() == "none" & input$color_numeric_var == "none") {
           F
         } else {T}
       }
   })
 
   colorvar_levels <- reactive({
-    if (isTruthy(input$color_factor_var_order)) {
-      input$color_factor_var_order
+    if (isTruthy(mod_choose_plotxy$color_factor_var_order())) {
+      mod_choose_plotxy$color_factor_var_order()
     } else {
       color_factorlevels_default()
     }
@@ -116,7 +130,7 @@ app_server <- function( input, output, session ) {
 
   aes_cust_colour <- reactive({
     if (colorvar_catch()) {
-      if (input$color_factor_var == "none") {
+      if (mod_choose_plotxy$color_factor_var() == "none") {
         aes(colour = colorNumeric)
       } else {
         aes(colour = factor(colorFactor, levels = colorvar_levels()))
@@ -126,7 +140,7 @@ app_server <- function( input, output, session ) {
 
   aes_cust_fill <- reactive({
     if (colorvar_catch()) {
-      if (input$color_factor_var == "none") {
+      if (mod_choose_plotxy$color_factor_var() == "none") {
         aes(fill = colorNumeric)
       } else {
         aes(fill = factor(colorFactor, levels = colorvar_levels()))
@@ -136,7 +150,7 @@ app_server <- function( input, output, session ) {
 
   aes_cust_colourfill <- reactive({
     if (colorvar_catch()) {
-      if (input$color_factor_var == "none") {
+      if (mod_choose_plotxy$color_factor_var() == "none") {
         aes(colour = colorNumeric,
             fill = colorNumeric)
       } else {
@@ -224,16 +238,16 @@ app_server <- function( input, output, session ) {
 
   ## get custom levels
   facet_hvar_levels <- reactive({
-    if (isTruthy(input$facet_hvar_order)) {
-      input$facet_hvar_order
+    if (isTruthy(mod_choose_plotxy$facet_hvar_order())) {
+      mod_choose_plotxy$facet_hvar_order()
     } else {
       facet_h_factorlevels_default()
     }
   })
 
   facet_vvar_levels <- reactive({
-    if (isTruthy(input$facet_vvar_order)) {
-      input$facet_vvar_order
+    if (isTruthy(mod_choose_plotxy$facet_vvar_order())) {
+      mod_choose_plotxy$facet_vvar_order()
     } else {
       facet_v_factorlevels_default()
     }
@@ -291,28 +305,28 @@ app_server <- function( input, output, session ) {
   }
 
   color_factor_var_formdf <- reactive({
-    TruthNoneOrNull(input$color_factor_var)
-  })# |> bindEvent(input$color_factor_var)
+    TruthNoneOrNull(mod_choose_plotxy$color_factor_var())
+  })# |> bindEvent(mod_choose_plotxy$color_factor_var())
 
   color_numeric_var_formdf <- reactive({
     TruthNoneOrNull(input$color_numeric_var)
   })# |> bindEvent(input$color_numeric_var)
 
   facet_hvar_formdf <- reactive({
-    TruthNoneOrNull(input$facet_hvar)
-  })# |> bindEvent(input$facet_hvar)
+    TruthNoneOrNull(mod_choose_plotxy$facet_hvar())
+  })# |> bindEvent(mod_choose_plotxy$facet_hvar())
 
   facet_vvar_formdf <- reactive({
-    TruthNoneOrNull(input$facet_vvar)
-  })# |> bindEvent(input$facet_vvar)
+    TruthNoneOrNull(mod_choose_plotxy$facet_vvar())
+  })# |> bindEvent(mod_choose_plotxy$facet_vvar())
 
   ## regression df
 
   data_do <- reactive({
 
     data_get() |> select(
-      x = input$xvar |> tryCatch(error = function(e) 1),
-      y = input$yvar |> tryCatch(error = function(e) 1),
+      x = mod_choose_plotxy$xvar() |> tryCatch(error = function(e) 1),
+      y = mod_choose_plotxy$yvar() |> tryCatch(error = function(e) 1),
       colorNumeric = color_numeric_var_formdf(),
       colorFactor = color_factor_var_formdf(),
       facetHFactor = facet_hvar_formdf(),
@@ -323,21 +337,21 @@ app_server <- function( input, output, session ) {
 
   ## later build some error handling in case there is nothing left after filter
   regr_data_filterx <- reactive({
-    if (input$xtrans %in% c("log10", "log2", "log")) {
+    if (mod_choose_plotxy$xtrans() %in% c("log10", "log2", "log")) {
       data_do() |> filter(x > 0)
-    } else if (input$xtrans %in% c("sqrt")) {
+    } else if (mod_choose_plotxy$xtrans() %in% c("sqrt")) {
       data_do() |> filter(x >= 0)
-    } else if (input$xtrans %in% c("logit", "probit")) {
+    } else if (mod_choose_plotxy$xtrans() %in% c("logit", "probit")) {
       data_do() |> filter(x > 0, x < 1)
     } else {data_do()}
   })
 
   regr_data_filtery <- reactive({
-    if (input$ytrans %in% c("log10", "log2", "log")) {
+    if (mod_choose_plotxy$ytrans() %in% c("log10", "log2", "log")) {
       regr_data_filterx() |> filter(y > 0)
-    } else if (input$ytrans %in% c("sqrt")) {
+    } else if (mod_choose_plotxy$ytrans() %in% c("sqrt")) {
       regr_data_filterx() |> filter(y >= 0)
-    } else if (input$ytrans %in% c("logit", "probit") | input$regression_conty %in% c("glm_binomial")) {
+    } else if (mod_choose_plotxy$ytrans() %in% c("logit", "probit") | input$regression_conty %in% c("glm_binomial")) {
       regr_data_filterx() |> filter(y > 0, y < 1)
     } else {regr_data_filterx()}
   })
@@ -361,11 +375,11 @@ app_server <- function( input, output, session ) {
 
   ## function to generate formula for x and y ##
   formula_x <- function() {
-    if (input$xtrans %in% c("log10", "log2", "log", "sqrt", "exp")) {
-      paste0(input$xtrans, "(x)")
-    } else if (input$xtrans == "logit") {
+    if (mod_choose_plotxy$xtrans() %in% c("log10", "log2", "log", "sqrt", "exp")) {
+      paste0(mod_choose_plotxy$xtrans(), "(x)")
+    } else if (mod_choose_plotxy$xtrans() == "logit") {
       "qlogis(x)"
-    } else if (input$xtrans == "probit") {
+    } else if (mod_choose_plotxy$xtrans() == "probit") {
       "qnorm(x)"
     } else {
       "x"
@@ -373,11 +387,11 @@ app_server <- function( input, output, session ) {
   }
 
   formula_y <- function() {
-    if (input$ytrans %in% c("log10", "log2", "log", "sqrt", "exp")) {
-      paste0(input$ytrans, "(y)")
-    } else if (input$ytrans == "logit") {
+    if (mod_choose_plotxy$ytrans() %in% c("log10", "log2", "log", "sqrt", "exp")) {
+      paste0(mod_choose_plotxy$ytrans(), "(y)")
+    } else if (mod_choose_plotxy$ytrans() == "logit") {
       "qlogis(y)"
-    } else if (input$ytrans == "probit") {
+    } else if (mod_choose_plotxy$ytrans() == "probit") {
       "qnorm(y)"
     } else {
       "y"
@@ -459,14 +473,14 @@ app_server <- function( input, output, session ) {
       for (i in seq_along(regrdf_split())) {
         ## x values depend on transformations
         x_expand <- seq(
-          from = regrdf_split()[[i]]$x |> transvar(fct = input$xtrans) |> min(),
-          to = regrdf_split()[[i]]$x |> transvar(fct = input$xtrans) |> max(),
+          from = regrdf_split()[[i]]$x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
+          to = regrdf_split()[[i]]$x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
           length.out = nrow
         )
 
         ## fill table
         dfi[[i]] <- tibble(
-          x = inversetrans(fct = input$xtrans, x = x_expand),
+          x = inversetrans(fct = mod_choose_plotxy$xtrans(), x = x_expand),
           y = 0,
           y_setop = 0,
           y_sebot = 0,
@@ -477,15 +491,15 @@ app_server <- function( input, output, session ) {
         if (input$regression_conty %in% c("lm", "quadratic", "cubic", "glm_binomial")) {
           predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se.fit = T)
 
-          dfi[[i]]$y <- inversetrans(fct = input$ytrans, predi$fit)
-          dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
-          dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
+          dfi[[i]]$y <- inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit)
+          dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
+          dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
         } else if (input$regression_conty %in% c("loess")) {
           predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se = T)
 
-          dfi[[i]]$y <- inversetrans(fct = input$ytrans, predi$fit)
-          dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
-          dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = input$ytrans)
+          dfi[[i]]$y <- inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit)
+          dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
+          dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
         }
       }
 
@@ -565,16 +579,16 @@ app_server <- function( input, output, session ) {
       tryCatch(error = function(e) F)
     ) {
       data_get() |>
-        group_by("x" = get(input$xvar)) |> ## need to fix so summary displays the x variable name
+        group_by("x" = get(mod_choose_plotxy$xvar())) |> ## need to fix so summary displays the x variable name
         summarise(
           count = n(),
-          mean = mean(get(input$yvar), na.rm = T),
-          median = median(get(input$yvar), na.rm = T),
-          "geometric_mean" = geomean(get(input$yvar), na.rm = T),
-          variance = var(get(input$yvar), na.rm = T),
-          "standard_deviation" = sd(get(input$yvar), na.rm = T),
-          "standard_error_of_mean" = sd(get(input$yvar), na.rm = T) / sqrt(n()),
-          "median_absolute_deviation" = mad(get(input$yvar), na.rm = T)
+          mean = mean(get(mod_choose_plotxy$yvar()), na.rm = T),
+          median = median(get(mod_choose_plotxy$yvar()), na.rm = T),
+          "geometric_mean" = geomean(get(mod_choose_plotxy$yvar()), na.rm = T),
+          variance = var(get(mod_choose_plotxy$yvar()), na.rm = T),
+          "standard_deviation" = sd(get(mod_choose_plotxy$yvar()), na.rm = T),
+          "standard_error_of_mean" = sd(get(mod_choose_plotxy$yvar()), na.rm = T) / sqrt(n()),
+          "median_absolute_deviation" = mad(get(mod_choose_plotxy$yvar()), na.rm = T)
         )
     } else {
       tibble(error = "error")
@@ -600,22 +614,22 @@ app_server <- function( input, output, session ) {
   })
 
   #### check whether variables are numeric ####
-  # error occurs before input$xvar is initialized, e.g. before user loads data
+  # error occurs before mod_choose_plotxy$xvar() is initialized, e.g. before user loads data
   # or switches to tab to select xvar and yvar
   # need to optimize script to avoid using tryCatch as it is computationally expensive
 
   xvar_isnumeric <- reactive({
-    (data_get() |> pull(input$xvar) |> is.numeric()) |>
+    (data_get() |> pull(mod_choose_plotxy$xvar()) |> is.numeric()) |>
       tryCatch(error = function(e) {F})
   })
 
   yvar_isnumeric <- reactive({
-    (data_get() |> pull(input$yvar) |> is.numeric()) |>
+    (data_get() |> pull(mod_choose_plotxy$yvar()) |> is.numeric()) |>
       tryCatch(error = function(e) {F})
   })
 
   xvar_iscategorical <- reactive({
-    !xvar_isnumeric() | input$x_asfactor
+    !xvar_isnumeric() | mod_choose_plotxy$x_asfactor()
   })
 
   # yvar_iscategorical <- reactive({
@@ -650,11 +664,11 @@ app_server <- function( input, output, session ) {
   })
 
   observe({
-    shinyWidgets::updatePickerInput(
-      session,
-      inputId = "color_factor_var",
-      choices = c("none", data_vars())
-    )
+    # shinyWidgets::updatePickerInput(
+    #   session,
+    #   inputId = "color_factor_var",
+    #   choices = c("none", data_vars())
+    # )
 
     shinyWidgets::updatePickerInput(
       session,
@@ -662,60 +676,60 @@ app_server <- function( input, output, session ) {
       choices = c("none", data_vars_numeric())
     )
 
-    shinyWidgets::updatePickerInput(
-      session,
-      inputId = "facet_hvar",
-      choices = c("none", data_vars())
-    )
-
-    shinyWidgets::updatePickerInput(
-      session,
-      inputId = "facet_vvar",
-      choices = c("none", data_vars())
-    )
+    # shinyWidgets::updatePickerInput(
+    #   session,
+    #   inputId = "facet_hvar",
+    #   choices = c("none", data_vars())
+    # )
+    #
+    # shinyWidgets::updatePickerInput(
+    #   session,
+    #   inputId = "facet_vvar",
+    #   choices = c("none", data_vars())
+    # )
 
   }) #|> bindEvent(data_vars())
 
 
   #### update column selection ####
   # bind it to data load button to increase efficiency
-  observe({
-    if (tryCatch(isTruthy(data_vars_numeric()), error = function(e) F)) {
-      updateSelectInput(session,
-                        inputId = "xvar",
-                        choices = data_vars(),
-                        selected = 1)
-
-      updateSelectInput(session,
-                        inputId = "yvar",
-                        choices = data_vars_numeric(),
-                        selected = 1)
-    } else if (isTruthy(data_vars() |> tryCatch(error = function(e) F))) {
-      shinyWidgets::sendSweetAlert(
-        title = "No numeric variables detected",
-        type = "error",
-        text = "This dashboard requires at least one numeric variable, as only
-        numeric variables are able to be plotted on the y-axis. Please double-
-        check and upload a new set of data where at least one column only
-        consist of numbers."
-      )
-    } else {
-      shinyWidgets::sendSweetAlert(
-        title = "Data error",
-        type = "error",
-        text = "Something went wrong with the data you uploaded and columns of
-        data could not be detected. Please make sure your file is in the correct
-        format and upload a new file."
-      )
-    }
-  }) |> bindEvent(mod_data_load$data_load_btn())# bindEvent(input$data_load)
+  # observe({
+  #   if (tryCatch(isTruthy(data_vars_numeric()), error = function(e) F)) {
+  #     updateSelectInput(session,
+  #                       inputId = "xvar",
+  #                       choices = data_vars(),
+  #                       selected = 1)
+  #
+  #     updateSelectInput(session,
+  #                       inputId = "yvar",
+  #                       choices = data_vars_numeric(),
+  #                       selected = 1)
+  #   } else if (isTruthy(data_vars() |> tryCatch(error = function(e) F))) {
+  #     shinyWidgets::sendSweetAlert(
+  #       title = "No numeric variables detected",
+  #       type = "error",
+  #       text = "This dashboard requires at least one numeric variable, as only
+  #       numeric variables are able to be plotted on the y-axis. Please double-
+  #       check and upload a new set of data where at least one column only
+  #       consist of numbers."
+  #     )
+  #   } else {
+  #     shinyWidgets::sendSweetAlert(
+  #       title = "Data error",
+  #       type = "error",
+  #       text = "Something went wrong with the data you uploaded and columns of
+  #       data could not be detected. Please make sure your file is in the correct
+  #       format and upload a new file."
+  #     )
+  #   }
+  # }) |> bindEvent(mod_data_load$data_load_btn()) # bindEvent(input$data_load)
 
   #### format x or y as factors and choose order ####
 
   ## function for ggplot mapping as factors
   xorder_catch <- reactive({
-    (if (identical(length(input$xorder), length(x_factorlevels_default()))) {
-      input$xorder
+    (if (identical(length(mod_choose_plotxy$xorder()), length(x_factorlevels_default()))) {
+      mod_choose_plotxy$xorder()
     } else {
       x_factorlevels_default()
     }) # |> tryCatch(error = function(e) x_factorlevels_default())
@@ -760,13 +774,13 @@ app_server <- function( input, output, session ) {
   #   # if (yvar_iscategorical()) {
   #   #
   #   #   factor(
-  #   #     get(input$yvar),
+  #   #     get(mod_choose_plotxy$yvar()),
   #   #     levels = yorder_catch()
   #   #   ) |> expr()
   #   #
   #   # } else {
   #
-  #     get(input$yvar) |> expr()
+  #     get(mod_choose_plotxy$yvar()) |> expr()
   #
   #   #}
   #
@@ -796,13 +810,13 @@ app_server <- function( input, output, session ) {
 
   x_scale_trans <- reactive({
     if (!xvar_iscategorical()) {
-      scale_x_continuous(trans = input$xtrans)
+      scale_x_continuous(trans = mod_choose_plotxy$xtrans())
     }
   })
 
   y_scale_trans <- reactive({
     # if (!yvar_iscategorical()) {
-      scale_y_continuous(trans = input$ytrans)
+      scale_y_continuous(trans = mod_choose_plotxy$ytrans())
     # }
   })
 
@@ -879,45 +893,37 @@ app_server <- function( input, output, session ) {
   })
   #### reorder factor levels observer ####
 
-  observe({
-          shinyjqui::updateOrderInput(
-            session,
-            inputId = "xorder",
-            items = x_factorlevels_default()
-          )
-  })# |> bindEvent(input$xvar)
+  # observe({
+  #         shinyjqui::updateOrderInput(
+  #           session,
+  #           inputId = "xorder",
+  #           items = x_factorlevels_default()
+  #         )
+  # })# |> bindEvent(mod_choose_plotxy$xvar())
 
   # observe({
   #   shinyjqui::updateOrderInput(
   #     session,
-  #     inputId = "yorder",
-  #     items = y_factorlevels_default()
+  #     inputId = "color_factor_var_order",
+  #     items = color_factorlevels_default()
   #   )
-  # })# |> bindEvent(input$yvar)
+  # })# |> bindEvent(mod_choose_plotxy$color_factor_var())
 
-  observe({
-    shinyjqui::updateOrderInput(
-      session,
-      inputId = "color_factor_var_order",
-      items = color_factorlevels_default()
-    )
-  })# |> bindEvent(input$color_factor_var)
-
-  observe({
-    shinyjqui::updateOrderInput(
-      session,
-      inputId = "facet_hvar_order",
-      items = facet_h_factorlevels_default()
-    )
-  })# |> bindEvent(input$facet_hvar)
-
-  observe({
-    shinyjqui::updateOrderInput(
-      session,
-      inputId = "facet_vvar_order",
-      items =facet_v_factorlevels_default()
-    )
-  })# |> bindEvent(input$facet_vvar)
+  # observe({
+  #   shinyjqui::updateOrderInput(
+  #     session,
+  #     inputId = "facet_hvar_order",
+  #     items = facet_h_factorlevels_default()
+  #   )
+  # })# |> bindEvent(mod_choose_plotxy$facet_hvar())
+  #
+  # observe({
+  #   shinyjqui::updateOrderInput(
+  #     session,
+  #     inputId = "facet_vvar_order",
+  #     items =facet_v_factorlevels_default()
+  #   )
+  # })# |> bindEvent(mod_choose_plotxy$facet_vvar())
 
   #### debug console ####
   output$debug <- renderTable({

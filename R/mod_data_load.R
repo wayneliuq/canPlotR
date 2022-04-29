@@ -1,6 +1,8 @@
 #' data_load UI Function
 #'
-#' @description A shiny Module.
+#' @description A shiny module which contains the UI for uploading 
+#' user data or selecting example datasets. The module server passes
+#' inputs from the UI to the final app.
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
@@ -8,14 +10,12 @@
 #'
 #' @importFrom shiny NS tagList 
 mod_data_load_ui <- function(id){
+  
   ns <- NS(id)
+  
+  #### use_example_data ####
   tagList(
-    checkboxInput(
-      inputId = ns("use_example_data"),
-      label = "Use example data",
-      value = F
-    ),
-    
+    ## specify which example dataset to use
     conditionalPanel(
       condition  = "input.use_example_data",
       ns = ns,
@@ -30,15 +30,7 @@ mod_data_load_ui <- function(id){
       )
     ),
     
-    # selectInput( "Choose data source",
-    #             inputId = "input_data_type",
-    #             choices = c(
-    #               "Upload Data" = 1,
-    #               "Example Data" = 2
-    #             ),
-    #           selected = 1),
-    
-    ## upload box for user data
+    #### upload box for user data
     conditionalPanel(
       condition = "input.use_example_data == false",
       ns = ns,
@@ -61,10 +53,17 @@ mod_data_load_ui <- function(id){
         position = "right",
         message = "Click here to load the data you selected.",
         size = "medium"
-      )
+      ),
+    
+    ## use example data
+    checkboxInput(
+      inputId = ns("use_example_data"),
+      label = "Use example data",
+      value = F
+    )
   )
   
-
+  
 }
 
 #' data_load Server Functions
@@ -74,6 +73,7 @@ mod_data_load_server <- function(id){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
     
+    ## send module UI inputs to the server
     returnVals <- reactiveValues(
       data_load_btn = reactive(input$data_load),
       data_user_path = reactive(input$data_user$datapath),
