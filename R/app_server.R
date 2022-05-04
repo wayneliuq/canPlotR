@@ -112,12 +112,9 @@ app_server <- function( input, output, session ) {
   ## mapping depending on whether color or fill needs to be changed
 
   colorvar_catch <- reactive({
-    if (isTruthy(mod_choose_plotxy$color_factor_var()) & isTruthy(input$color_numeric_var) |>
-      tryCatch(error = function(e) F)) {
-        if (mod_choose_plotxy$color_factor_var() == "none" & input$color_numeric_var == "none") {
-          F
-        } else {T}
-      }
+      if (mod_choose_plotxy$color_factor_var() == "none" & input$color_numeric_var == "none") {
+        F
+      } else {T}
   })
 
   colorvar_levels <- reactive({
@@ -257,17 +254,17 @@ app_server <- function( input, output, session ) {
 
   facet_cust <- reactive({
 
-    if (data_do()$facetHFactor |> is.null() |> suppressWarnings() & data_do()$facetVFactor |> is.null() |> suppressWarnings()) {
+    if (data_do()$facetHFactor |> is.null() & data_do()$facetVFactor |> is.null()) {
       facet_grid(
         cols = NULL,
         rows = NULL
       )
-    } else if (data_do()$facetVFactor |> is.null() |> suppressWarnings()) {
+    } else if (data_do()$facetVFactor |> is.null()) {
       facet_grid(
         cols = facetHFactor |> factor(levels = facet_hvar_levels()) |> vars(),
         scales = "fixed"
       )
-    } else if (data_do()$facetHFactor |> is.null() |> suppressWarnings()) {
+    } else if (data_do()$facetHFactor |> is.null()) {
       facet_grid(
         rows = facetVFactor |> factor(levels = facet_vvar_levels()) |> vars(),
         scales = "fixed"
@@ -664,11 +661,6 @@ app_server <- function( input, output, session ) {
   })
 
   observe({
-    # shinyWidgets::updatePickerInput(
-    #   session,
-    #   inputId = "color_factor_var",
-    #   choices = c("none", data_vars())
-    # )
 
     shinyWidgets::updatePickerInput(
       session,
@@ -676,53 +668,8 @@ app_server <- function( input, output, session ) {
       choices = c("none", data_vars_numeric())
     )
 
-    # shinyWidgets::updatePickerInput(
-    #   session,
-    #   inputId = "facet_hvar",
-    #   choices = c("none", data_vars())
-    # )
-    #
-    # shinyWidgets::updatePickerInput(
-    #   session,
-    #   inputId = "facet_vvar",
-    #   choices = c("none", data_vars())
-    # )
+  })
 
-  }) #|> bindEvent(data_vars())
-
-
-  #### update column selection ####
-  # bind it to data load button to increase efficiency
-  # observe({
-  #   if (tryCatch(isTruthy(data_vars_numeric()), error = function(e) F)) {
-  #     updateSelectInput(session,
-  #                       inputId = "xvar",
-  #                       choices = data_vars(),
-  #                       selected = 1)
-  #
-  #     updateSelectInput(session,
-  #                       inputId = "yvar",
-  #                       choices = data_vars_numeric(),
-  #                       selected = 1)
-  #   } else if (isTruthy(data_vars() |> tryCatch(error = function(e) F))) {
-  #     shinyWidgets::sendSweetAlert(
-  #       title = "No numeric variables detected",
-  #       type = "error",
-  #       text = "This dashboard requires at least one numeric variable, as only
-  #       numeric variables are able to be plotted on the y-axis. Please double-
-  #       check and upload a new set of data where at least one column only
-  #       consist of numbers."
-  #     )
-  #   } else {
-  #     shinyWidgets::sendSweetAlert(
-  #       title = "Data error",
-  #       type = "error",
-  #       text = "Something went wrong with the data you uploaded and columns of
-  #       data could not be detected. Please make sure your file is in the correct
-  #       format and upload a new file."
-  #     )
-  #   }
-  # }) |> bindEvent(mod_data_load$data_load_btn()) # bindEvent(input$data_load)
 
   #### format x or y as factors and choose order ####
 
@@ -734,14 +681,6 @@ app_server <- function( input, output, session ) {
       x_factorlevels_default()
     }) # |> tryCatch(error = function(e) x_factorlevels_default())
   })
-
-  # yorder_catch <- reactive({
-  #   (if (identical(length(input$yorder), length(y_factorlevels_default()))) {
-  #     input$yorder
-  #   } else {
-  #     y_factorlevels_default()
-  #   }) # |> tryCatch(error = function(e) y_factorlevels_default())
-  # })
 
   ## format x and y variables as ggplot mapping objects
   # If your wrapper has a more specific interface with named arguments,
@@ -769,22 +708,6 @@ app_server <- function( input, output, session ) {
 
   })
 
-  # yvar_plot <- reactive({
-  #
-  #   # if (yvar_iscategorical()) {
-  #   #
-  #   #   factor(
-  #   #     get(mod_choose_plotxy$yvar()),
-  #   #     levels = yorder_catch()
-  #   #   ) |> expr()
-  #   #
-  #   # } else {
-  #
-  #     get(mod_choose_plotxy$yvar()) |> expr()
-  #
-  #   #}
-  #
-  # })
 
   #### numeric variable transformation ####
   # allow the user to set the scale transformation for
@@ -845,24 +768,12 @@ app_server <- function( input, output, session ) {
       )
     }
 
-    # if (yvar_iscategorical()) {
-    #   shinyWidgets::updatePickerInput(
-    #     session = session,
-    #     inputId = "ytrans",
-    #     choices = trans_continuous,
-    #     choicesOpt = list(disabled = disabled_choices,
-    #                       style = ifelse(disabled_choices,
-    #                                      yes = "color: rgba(119, 119, 119, 0.5);",
-    #                                      no = ""))
-    #
-    #   )
-    # } else {
       shinyWidgets::updatePickerInput(
         session = session,
         inputId = "ytrans",
         choices = trans_continuous
       )
-    # }
+
   })
 
   #### get the factor levels of variables ####
