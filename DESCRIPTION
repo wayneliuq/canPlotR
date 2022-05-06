@@ -35,6 +35,7 @@ Suggests:
 Config/testthat/edition: 3
 Language: en-US
 Depends: 
+    data.table,
     dplyr,
     ggplot2,
     R (>= 2.10)

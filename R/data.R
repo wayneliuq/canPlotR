@@ -1,6 +1,6 @@
 #' Dose-response of cell lines to investigative compound treatment
 #'
-#' A dataset containing the viability response of two cell lines to 
+#' A dataset containing the viability response of two cell lines to
 #' different concentrations of series of investigative compounds. There
 #' are two technical replicates for each compound/concentration combination.
 #'
@@ -14,18 +14,6 @@
 #' }
 #' @source Author's dataset.
 "example_dr"
-
-#' Distribution of hair and eye color and sex in 592 statistics students.
-#'
-#' @format A tibble containing 592 rows and 3 variables:
-#' \describe{
-#'   \item{Hair}{Hair color}
-#'   \item{Eye}{Eye color}
-#'   \item{Sex}{Sex}
-#'   ...
-#' }
-#' @source \url{http://www.datavis.ca/sas/vcd/catdata/haireye.sas}
-"example_HairEye"
 
 #' Weight versus age of chicks on different diets
 #'
@@ -43,4 +31,4 @@
 #' @source Crowder, M. and Hand, D. (1990), Analysis of Repeated Measures, Chapman and Hall (example 5.3)
 #' Hand, D. and Crowder, M. (1996), Practical Longitudinal Data Analysis, Chapman and Hall (table A.2)
 #' Pinheiro, J. C. and Bates, D. M. (2000) Mixed-effects Models in S and S-PLUS, Springer.
-"example_HairEye"
+"example_ChickWeight"
