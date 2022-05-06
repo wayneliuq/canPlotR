@@ -296,28 +296,26 @@ app_server <- function( input, output, session ) {
 
   ## get variables for regression df
 
-  TruthNoneOrNull <- function(x) {
-    if (isTruthy(x) |> tryCatch(error = function(x) F)) {
-      if (x != "none") {
-        x
-      } else NULL
+  NoneOrNull <- function(x) {
+    if (x != "none") {
+      x
     } else NULL
   }
 
   color_factor_var_formdf <- reactive({
-    TruthNoneOrNull(mod_choose_plotxy$color_factor_var())
+    NoneOrNull(mod_choose_plotxy$color_factor_var())
   })# |> bindEvent(mod_choose_plotxy$color_factor_var())
 
   color_numeric_var_formdf <- reactive({
-    TruthNoneOrNull(input$color_numeric_var)
+    NoneOrNull(input$color_numeric_var)
   })# |> bindEvent(input$color_numeric_var)
 
   facet_hvar_formdf <- reactive({
-    TruthNoneOrNull(mod_choose_plotxy$facet_hvar())
+    NoneOrNull(mod_choose_plotxy$facet_hvar())
   })# |> bindEvent(mod_choose_plotxy$facet_hvar())
 
   facet_vvar_formdf <- reactive({
-    TruthNoneOrNull(mod_choose_plotxy$facet_vvar())
+    NoneOrNull(mod_choose_plotxy$facet_vvar())
   })# |> bindEvent(mod_choose_plotxy$facet_vvar())
 
   ## regression df
@@ -333,14 +331,13 @@ app_server <- function( input, output, session ) {
     #   facetVFactor = facet_vvar_formdf()
     # )
 
-    # error in get NULL
     data_get()[, list(
       x = mod_choose_plotxy$xvar() |> get() |> tryCatch(error = function(e) 1),
       y = mod_choose_plotxy$yvar() |> get() |> tryCatch(error = function(e) 1),
-      colorNumeric = color_numeric_var_formdf() |> get(),
-      colorFactor = color_factor_var_formdf() |> get(),
-      facetHFactor = facet_hvar_formdf() |> get(),
-      facetVFactor = facet_vvar_formdf() |> get()
+      colorNumeric = color_numeric_var_formdf() |> get() |> tryCatch(error = function(e) NULL),
+      colorFactor = color_factor_var_formdf() |> get() |> tryCatch(error = function(e) NULL),
+      facetHFactor = facet_hvar_formdf() |> get() |> tryCatch(error = function(e) NULL),
+      facetVFactor = facet_vvar_formdf() |> get() |> tryCatch(error = function(e) NULL)
     )]
 
   })
@@ -468,13 +465,6 @@ app_server <- function( input, output, session ) {
         span = 0.5
       )
 
-      # lapply(
-      #   X = regrdf_split(),
-      #   FUN = loess,
-      #   formula = regr_formula(),
-      #   span = 0.5
-      # )
-
     } else if (input$regression_conty == "glm_binomial") {
 
       glm(
@@ -482,13 +472,6 @@ app_server <- function( input, output, session ) {
         data = regr_data_filtery(),
         family = binomial
       )
-
-      # lapply(
-      #   X = regrdf_split(),
-      #   FUN = glm,
-      #   formula = regr_formula(),
-      #   family = binomial
-      # )
 
     }
 
@@ -521,11 +504,11 @@ app_server <- function( input, output, session ) {
           se.fit = T
         ) |> as.data.table()
 
-        pred[, `:=(
+        pred[, `:=`(
           y = fit,
           y_setop = seFind(fct = max, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-        )`]
+          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans())
+        )]
 
       } else if (input$regression_conty %in% c("loess")) {
         pred <- predict(
@@ -534,11 +517,11 @@ app_server <- function( input, output, session ) {
           se = T
         ) |> as.data.table()
 
-        pred[, `:=(
+        pred[, `:=`(
           y = fit,
           y_setop = seFind(fct = max, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-        )`]
+          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans())
+        )]
 
       }
 
@@ -1009,11 +992,11 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
-    regrdf()
+    "none"
   })
 
   output$debug2 <- renderText({
-    mod_data_load$example_dataset()
+    as.character(regr_formula())
 
   })
 
