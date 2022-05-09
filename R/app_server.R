@@ -297,11 +297,11 @@ app_server <- function( input, output, session ) {
   ## get variables for regression df
 
   TruthNoneOrNull <- function(x) {
-    if (isTruthy(x) |> tryCatch(error = function(x) F)) {
+  #  if (isTruthy(x) |> tryCatch(error = function(x) F)) {
       if (x != "none") {
-        x
+        get(!!x) |> expr()
       } else NULL
-    } else NULL
+  #  } else NULL
   }
 
   color_factor_var_formdf <- reactive({
@@ -337,10 +337,10 @@ app_server <- function( input, output, session ) {
     data_get()[, list(
       x = mod_choose_plotxy$xvar() |> get() |> tryCatch(error = function(e) 1),
       y = mod_choose_plotxy$yvar() |> get() |> tryCatch(error = function(e) 1),
-      colorNumeric = color_numeric_var_formdf() |> get(),
-      colorFactor = color_factor_var_formdf() |> get(),
-      facetHFactor = facet_hvar_formdf() |> get(),
-      facetVFactor = facet_vvar_formdf() |> get()
+      colorNumeric = color_numeric_var_formdf() |> eval(),
+      colorFactor = color_factor_var_formdf() |> eval(),
+      facetHFactor = facet_hvar_formdf() |> eval(),
+      facetVFactor = facet_vvar_formdf() |> eval()
     )]
 
   })
@@ -949,7 +949,7 @@ app_server <- function( input, output, session ) {
 
   #### get the factor levels of variables ####
   GetColLevelsCatch <- function(dat, col, error_output) {
-    (dat |> pull(col) |> factor() |> levels()) |>
+    dat[[col]] |> factor() |> levels() |>
       tryCatch(error = function(e) error_output)
   }
 
@@ -1009,7 +1009,7 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
-    regrdf()
+    data_do()
   })
 
   output$debug2 <- renderText({
