@@ -22,7 +22,6 @@ app_server <- function( input, output, session ) {
     facet_v_factorlevels = facet_v_factorlevels_default
 
   )
-
   #### final output plot ####
   ## this is the ggplot2 function which will render the final plot
 
