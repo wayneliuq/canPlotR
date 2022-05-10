@@ -296,35 +296,26 @@ app_server <- function( input, output, session ) {
 
   ## get variables for regression df
 
-<<<<<<< HEAD
   TruthNoneOrNull <- function(x) {
-  #  if (isTruthy(x) |> tryCatch(error = function(x) F)) {
-      if (x != "none") {
-        get(!!x) |> expr()
-      } else NULL
-  #  } else NULL
-=======
-  NoneOrNull <- function(x) {
     if (x != "none") {
-      x
+      get(!!x) |> expr()
     } else NULL
->>>>>>> 6490da855f7828c89bf66d6ac0cd0eb47caa3df1
   }
 
   color_factor_var_formdf <- reactive({
-    NoneOrNull(mod_choose_plotxy$color_factor_var())
+    TruthNoneOrNull(mod_choose_plotxy$color_factor_var())
   })# |> bindEvent(mod_choose_plotxy$color_factor_var())
 
   color_numeric_var_formdf <- reactive({
-    NoneOrNull(input$color_numeric_var)
+    TruthNoneOrNull(input$color_numeric_var)
   })# |> bindEvent(input$color_numeric_var)
 
   facet_hvar_formdf <- reactive({
-    NoneOrNull(mod_choose_plotxy$facet_hvar())
+    TruthNoneOrNull(mod_choose_plotxy$facet_hvar())
   })# |> bindEvent(mod_choose_plotxy$facet_hvar())
 
   facet_vvar_formdf <- reactive({
-    NoneOrNull(mod_choose_plotxy$facet_vvar())
+    TruthNoneOrNull(mod_choose_plotxy$facet_vvar())
   })# |> bindEvent(mod_choose_plotxy$facet_vvar())
 
   ## regression df
@@ -343,17 +334,10 @@ app_server <- function( input, output, session ) {
     data_get()[, list(
       x = mod_choose_plotxy$xvar() |> get() |> tryCatch(error = function(e) 1),
       y = mod_choose_plotxy$yvar() |> get() |> tryCatch(error = function(e) 1),
-<<<<<<< HEAD
       colorNumeric = color_numeric_var_formdf() |> eval(),
       colorFactor = color_factor_var_formdf() |> eval(),
       facetHFactor = facet_hvar_formdf() |> eval(),
       facetVFactor = facet_vvar_formdf() |> eval()
-=======
-      colorNumeric = color_numeric_var_formdf() |> get() |> tryCatch(error = function(e) NULL),
-      colorFactor = color_factor_var_formdf() |> get() |> tryCatch(error = function(e) NULL),
-      facetHFactor = facet_hvar_formdf() |> get() |> tryCatch(error = function(e) NULL),
-      facetVFactor = facet_vvar_formdf() |> get() |> tryCatch(error = function(e) NULL)
->>>>>>> 6490da855f7828c89bf66d6ac0cd0eb47caa3df1
     )]
 
   })
@@ -1024,11 +1008,7 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
-<<<<<<< HEAD
     data_do()
-=======
-    "none"
->>>>>>> 6490da855f7828c89bf66d6ac0cd0eb47caa3df1
   })
 
   output$debug2 <- renderText({
