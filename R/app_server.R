@@ -296,28 +296,35 @@ app_server <- function( input, output, session ) {
 
   ## get variables for regression df
 
+<<<<<<< HEAD
   TruthNoneOrNull <- function(x) {
   #  if (isTruthy(x) |> tryCatch(error = function(x) F)) {
       if (x != "none") {
         get(!!x) |> expr()
       } else NULL
   #  } else NULL
+=======
+  NoneOrNull <- function(x) {
+    if (x != "none") {
+      x
+    } else NULL
+>>>>>>> 6490da855f7828c89bf66d6ac0cd0eb47caa3df1
   }
 
   color_factor_var_formdf <- reactive({
-    TruthNoneOrNull(mod_choose_plotxy$color_factor_var())
+    NoneOrNull(mod_choose_plotxy$color_factor_var())
   })# |> bindEvent(mod_choose_plotxy$color_factor_var())
 
   color_numeric_var_formdf <- reactive({
-    TruthNoneOrNull(input$color_numeric_var)
+    NoneOrNull(input$color_numeric_var)
   })# |> bindEvent(input$color_numeric_var)
 
   facet_hvar_formdf <- reactive({
-    TruthNoneOrNull(mod_choose_plotxy$facet_hvar())
+    NoneOrNull(mod_choose_plotxy$facet_hvar())
   })# |> bindEvent(mod_choose_plotxy$facet_hvar())
 
   facet_vvar_formdf <- reactive({
-    TruthNoneOrNull(mod_choose_plotxy$facet_vvar())
+    NoneOrNull(mod_choose_plotxy$facet_vvar())
   })# |> bindEvent(mod_choose_plotxy$facet_vvar())
 
   ## regression df
@@ -333,14 +340,20 @@ app_server <- function( input, output, session ) {
     #   facetVFactor = facet_vvar_formdf()
     # )
 
-    # error in get NULL
     data_get()[, list(
       x = mod_choose_plotxy$xvar() |> get() |> tryCatch(error = function(e) 1),
       y = mod_choose_plotxy$yvar() |> get() |> tryCatch(error = function(e) 1),
+<<<<<<< HEAD
       colorNumeric = color_numeric_var_formdf() |> eval(),
       colorFactor = color_factor_var_formdf() |> eval(),
       facetHFactor = facet_hvar_formdf() |> eval(),
       facetVFactor = facet_vvar_formdf() |> eval()
+=======
+      colorNumeric = color_numeric_var_formdf() |> get() |> tryCatch(error = function(e) NULL),
+      colorFactor = color_factor_var_formdf() |> get() |> tryCatch(error = function(e) NULL),
+      facetHFactor = facet_hvar_formdf() |> get() |> tryCatch(error = function(e) NULL),
+      facetVFactor = facet_vvar_formdf() |> get() |> tryCatch(error = function(e) NULL)
+>>>>>>> 6490da855f7828c89bf66d6ac0cd0eb47caa3df1
     )]
 
   })
@@ -412,45 +425,61 @@ app_server <- function( input, output, session ) {
     regr_data_filtery() |> colnames() |> grep(pattern = "Factor")
   })
 
-  formula_factor <- function() {
-
-    if (length(regr_factors()) > 0) {
-      paste0(
-        " + ",
-        paste0(regr_factors(), collapse = " + ")
-      )
-    } else {NULL}
-  }
-
   regr_formula <- reactive({
     if (input$regression_conty == "quadratic") {
       paste0(
         formula_y(),
         " ~ poly(",
         formula_x(),
-        ", degree = 2, raw = TRUE)",
-        formula_factor()
+        ", degree = 2, raw = TRUE)"
       ) |> as.formula()
     } else if (input$regression_conty == "cubic") {
       paste0(
         formula_y(),
         " ~ poly(",
         formula_x(),
-        ", degree = 3, raw = TRUE)",
-        formula_factor()
+        ", degree = 3, raw = TRUE)"
       ) |> as.formula()
     } else {
         paste0(
           formula_y(),
           " ~ ",
-          formula_x(),
-          formula_factor()
+          formula_x()
         ) |> as.formula()
     }
 
   })
 
   ## perform model fitting
+  ## Function
+
+  regr_model_fct <- function(dat, formula) {
+    if (input$regression_conty %in% c("lm", "quadratic", "cubic")) {
+
+      lm(
+        formula = formula,
+        data = dat
+      )
+
+    } else if (input$regression_conty == "loess") {
+
+      loess(
+        formula = formula,
+        data = dat,
+        span = 0.5
+      )
+
+    } else if (input$regression_conty == "glm_binomial") {
+
+      glm(
+        formula = formula,
+        data = dat,
+        family = binomial
+      )
+
+    }
+  }
+
   regr_model <- reactive({
 
     if (input$regression_conty %in% c("lm", "quadratic", "cubic")) {
@@ -468,13 +497,6 @@ app_server <- function( input, output, session ) {
         span = 0.5
       )
 
-      # lapply(
-      #   X = regrdf_split(),
-      #   FUN = loess,
-      #   formula = regr_formula(),
-      #   span = 0.5
-      # )
-
     } else if (input$regression_conty == "glm_binomial") {
 
       glm(
@@ -482,13 +504,6 @@ app_server <- function( input, output, session ) {
         data = regr_data_filtery(),
         family = binomial
       )
-
-      # lapply(
-      #   X = regrdf_split(),
-      #   FUN = glm,
-      #   formula = regr_formula(),
-      #   family = binomial
-      # )
 
     }
 
@@ -521,11 +536,11 @@ app_server <- function( input, output, session ) {
           se.fit = T
         ) |> as.data.table()
 
-        pred[, `:=(
+        pred[, `:=`(
           y = fit,
           y_setop = seFind(fct = max, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-        )`]
+          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans())
+        )]
 
       } else if (input$regression_conty %in% c("loess")) {
         pred <- predict(
@@ -534,11 +549,11 @@ app_server <- function( input, output, session ) {
           se = T
         ) |> as.data.table()
 
-        pred[, `:=(
+        pred[, `:=`(
           y = fit,
           y_setop = seFind(fct = max, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-        )`]
+          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans())
+        )]
 
       }
 
@@ -1009,11 +1024,15 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
+<<<<<<< HEAD
     data_do()
+=======
+    "none"
+>>>>>>> 6490da855f7828c89bf66d6ac0cd0eb47caa3df1
   })
 
   output$debug2 <- renderText({
-    mod_data_load$example_dataset()
+    as.character(regr_formula())
 
   })
 

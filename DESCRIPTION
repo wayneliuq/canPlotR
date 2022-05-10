@@ -6,7 +6,7 @@ Authors@R:
            family = "Liu",
            role = c("aut", "cre"),
            email = "wayneliuq@gmail.com")
-Description: Intuitive shiny interface for creating presentation-ready plots.
+Description: Intuitive shiny interface for creating publication-ready plots.
 License: MIT + file LICENSE
 Imports: 
     attempt,
