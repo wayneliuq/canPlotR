@@ -223,15 +223,6 @@ app_server <- function( input, output, session ) {
       ) #fill is shading, color is border (set both)
     }
   })
-  ## categorical x & y
-  geomcust_count <- reactive({
-    if (input$geomcount) {
-      geom_count(
-        mapping = aes_cust_colourfill(),
-        position = position_dodge(0.85)
-      )
-    }
-  })
 
   #### faceting data by user ####
   ## only facet_grid is planned to be supported
@@ -406,7 +397,7 @@ app_server <- function( input, output, session ) {
   }
 
   regr_factors <- reactive({
-    regr_data_filtery() |> colnames() |> grep(pattern = "Factor")
+    setdiff(regr_data_filtery() |> colnames(), c("x", "y"))
   })
 
   regr_formula <- reactive({
@@ -464,34 +455,61 @@ app_server <- function( input, output, session ) {
     }
   }
 
-  regr_model <- reactive({
+  # regr_model <- reactive({
+  #
+  #   if (input$regression_conty %in% c("lm", "quadratic", "cubic")) {
+  #
+  #     lm(
+  #       formula = regr_formula(),
+  #       data = regr_data_filtery()
+  #     )
+  #
+  #   } else if (input$regression_conty == "loess") {
+  #
+  #     loess(
+  #       formula = regr_formula(),
+  #       data = regr_data_filtery(),
+  #       span = 0.5
+  #     )
+  #
+  #   } else if (input$regression_conty == "glm_binomial") {
+  #
+  #     glm(
+  #       formula = regr_formula(),
+  #       data = regr_data_filtery(),
+  #       family = binomial
+  #     )
+  #
+  #   }
+  #
+  # })
 
-    if (input$regression_conty %in% c("lm", "quadratic", "cubic")) {
+  regr_model <- function (dat) {
+      if (input$regression_conty %in% c("lm", "quadratic", "cubic")) {
 
-      lm(
-        formula = regr_formula(),
-        data = regr_data_filtery()
-      )
+        lm(
+          formula = regr_formula(),
+          data = dat
+        )
 
-    } else if (input$regression_conty == "loess") {
+      } else if (input$regression_conty == "loess") {
 
-      loess(
-        formula = regr_formula(),
-        data = regr_data_filtery(),
-        span = 0.5
-      )
+        loess(
+          formula = regr_formula(),
+          data = dat,
+          span = 0.5
+        )
 
-    } else if (input$regression_conty == "glm_binomial") {
+      } else if (input$regression_conty == "glm_binomial") {
 
-      glm(
-        formula = regr_formula(),
-        data = regr_data_filtery(),
-        family = binomial
-      )
+        glm(
+          formula = regr_formula(),
+          data = dat,
+          family = binomial
+        )
 
-    }
-
-  })
+      }
+  }
 
   ## df for regression plotting
   # example_dr[, list(x = seq(
@@ -513,39 +531,7 @@ app_server <- function( input, output, session ) {
         ) |> inversetrans(fct = mod_choose_plotxy$xtrans())
       ), by = regr_factors()]
 
-      if (input$regression_conty %in% c("lm", "quadratic", "cubic", "glm_binomial")) {
-        pred <- predict(
-          object = regr_model(),
-          newdata = df,
-          se.fit = T
-        ) |> as.data.table()
-
-        pred[, `:=`(
-          y = fit,
-          y_setop = seFind(fct = max, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans())
-        )]
-
-      } else if (input$regression_conty %in% c("loess")) {
-        pred <- predict(
-          object = regr_model(),
-          newdata = df,
-          se = T
-        ) |> as.data.table()
-
-        pred[, `:=`(
-          y = fit,
-          y_setop = seFind(fct = max, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans()),
-          y_sebot = seFind(fct = min, fit = fit, se = se.fit, trans = mod_choose_plotxy$ytrans())
-        )]
-
-      }
-
-      df[, `:=`(
-        y = pred$y,
-        y_setop = pred$setop,
-        y_sebot = pred$sebot
-      )]
+      ## fix here
 
       return(df)
 
@@ -955,10 +941,6 @@ app_server <- function( input, output, session ) {
   x_factorlevels_default <- reactive({
     GetColLevelsCatch(data_do(), "x", "NA")
   })
-
-  # y_factorlevels_default <- reactive({
-  #   GetColLevelsCatch(data_do(), "y", "NA")
-  # })
 
   color_factorlevels_default <- reactive({
     GetColLevelsCatch(data_do(), "colorFactor", "NA")
