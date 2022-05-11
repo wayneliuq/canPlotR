@@ -453,22 +453,36 @@ app_server <- function( input, output, session ) {
     }
   }
 
+  ## test for whether data needs splitting
+  data_anyFactor <- reactive({
+    any(grep("Factor", regr_data_filtery()))
+  })
+
   ## split data
+
   data_split <- reactive({
     if (input$regression_conty != "none") {
-      split(data_do(), by = regr_factors(), keep.by = F)
-    }
+      if (data_anyFactor()) {
+        split(regr_data_filtery(), by = regr_factors(), keep.by = T)
+      } else {
+        regr_data_filtery()
+      }
+    } else {NULL}
   })
 
   ## model list
   regr_modellist <- reactive({
-    if (input$regression_conty != "none") {
-      lapply(
-        data_split(),
-        regr_model_fct,
-        formula = regr_formula()
-      )
-    }
+    if (input$regression_conty != "none" & !is.null(data_split())) {
+      if (data_anyFactor()) {
+        lapply(
+          data_split(),
+          regr_model_fct,
+          formula = regr_formula()
+        )
+      } else {
+        regr_model_fct(dat = data_split(), formula = regr_formula())
+      }
+    } else {NULL}
   })
 
   # regr_model <- reactive({
@@ -509,17 +523,41 @@ app_server <- function( input, output, session ) {
   # )), by = .(Cell, Compound)]
   regrdf <- reactive({
 
-    if (input$regression_conty != "none") {
+    if (input$regression_conty != "none" & !is.null(regr_modellist())) {
 
-      nrow = 50 ## later set higher or make it tunable?
+      nrow = 100 ## later set higher or make it tunable?
 
-      df <- regr_data_filtery()[, list(
-        x = seq(
-          from = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
-          to = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
-          length.out = nrow
-        ) |> inversetrans(fct = mod_choose_plotxy$xtrans())
-      ), by = regr_factors()]
+      if (data_anyFactor()) {
+
+        df <- rep(data.table(0), length(data_split()))
+
+        for (i in seq_along(data_split())) {
+          df[[i]] <- data_split()[[i]][, list(
+            x = seq(
+              from = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
+              to = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
+              length.out = nrow
+            ) |> inversetrans(fct = mod_choose_plotxy$xtrans()),
+            y = 0,
+            .SD[1]
+          ), .SDcols = patterns("Factor")]
+
+          df[[i]][, list(
+            y = predict(regr_modellist[[i]], newdata = .SD)
+          )]
+        }
+
+      } else {}
+
+
+
+      # df <- regr_data_filtery()[, list(
+      #   x = seq(
+      #     from = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
+      #     to = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
+      #     length.out = nrow
+      #   ) |> inversetrans(fct = mod_choose_plotxy$xtrans())
+      # ), by = regr_factors()]
 
 
       ## fix here
