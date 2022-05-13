@@ -73,28 +73,7 @@ app_ui <- function(request) {
               #### statistics and regression ####
               tabPanel(
                 title = "3. Regression",
-
-                conditionalPanel(
-                  condition = "output.xvar_isnumeric",
-
-                  fluidRow(
-                    p(strong("Regression for continuous y variables")),
-
-                    shinyWidgets::pickerInput(
-                      inputId = "regression_conty",
-                      label = "Select regression model:",
-                      choices = c(
-                        "none",
-                        "linear regression" = "lm",
-                        "local polynomial (smooth)" = "loess",
-                        "quadratic" = "quadratic",
-                        "cubic" = "cubic",
-                        "logistic" = "glm_binomial"
-                      )
-                    )
-                  )
-                )
-
+                mod_regression_ui("regression_1")
               )
             )
           )

@@ -22,6 +22,13 @@ app_server <- function( input, output, session ) {
     facet_v_factorlevels = facet_v_factorlevels_default
 
   )
+
+  mod_regression <- mod_regression_server(
+    "regression_1",
+    data_do = data_do,
+    xtrans = mod_choose_plotxy$xtrans,
+    ytrans = mod_choose_plotxy$ytrans
+  )
   #### final output plot ####
   ## this is the ggplot2 function which will render the final plot
 
@@ -311,15 +318,6 @@ app_server <- function( input, output, session ) {
 
   data_do <- reactive({
 
-    # data_get() |> select(
-    #   x = mod_choose_plotxy$xvar() |> tryCatch(error = function(e) 1),
-    #   y = mod_choose_plotxy$yvar() |> tryCatch(error = function(e) 1),
-    #   colorNumeric = color_numeric_var_formdf(),
-    #   colorFactor = color_factor_var_formdf(),
-    #   facetHFactor = facet_hvar_formdf(),
-    #   facetVFactor = facet_vvar_formdf()
-    # )
-
     data_get()[, list(
       x = mod_choose_plotxy$xvar() |> get() |> tryCatch(error = function(e) 1),
       y = mod_choose_plotxy$yvar() |> get() |> tryCatch(error = function(e) 1),
@@ -331,334 +329,20 @@ app_server <- function( input, output, session ) {
 
   })
 
-  ## later build some error handling in case there is nothing left after filter
-  regr_data_filterx <- reactive({
-    if (mod_choose_plotxy$xtrans() %in% c("log10", "log2", "log")) {
-      data_do()[x > 0]
-    } else if (mod_choose_plotxy$xtrans() %in% c("sqrt")) {
-      data_do()[x >= 0]
-    } else if (mod_choose_plotxy$xtrans() %in% c("logit", "probit")) {
-      data_do()[x > 0 & x < 1]
-    } else {data_do()}
-  })
-
-  regr_data_filtery <- reactive({
-    if (mod_choose_plotxy$ytrans() %in% c("log10", "log2", "log")) {
-      regr_data_filterx()[y > 0]
-    } else if (mod_choose_plotxy$ytrans() %in% c("sqrt")) {
-      regr_data_filterx()[y >= 0]
-    } else if (mod_choose_plotxy$ytrans() %in% c("logit", "probit") | input$regression_conty %in% c("glm_binomial")) {
-      regr_data_filterx()[y > 0 & y < 1]
-    } else {regr_data_filterx()}
-  })
-
   #### regression logics ####
-  ## find and replace the following ##
-  # regrdf_group <- reactive({
-  #   regr_data_filtery() |>
-  #     group_by(
-  #       across(
-  #         all_of(
-  #           grep("Factor", colnames(regr_data_filtery()), value = T)
-  #         )
-  #       )
-  #     )
-  # })
-  #
-  # regrdf_split <- reactive({
-  #   regrdf_group() |> group_split()
-  # })
-
-  ## function to generate formula for x and y ##
-  formula_x <- function() {
-    if (mod_choose_plotxy$xtrans() %in% c("log10", "log2", "log", "sqrt", "exp")) {
-      paste0(mod_choose_plotxy$xtrans(), "(x)")
-    } else if (mod_choose_plotxy$xtrans() == "logit") {
-      "qlogis(x)"
-    } else if (mod_choose_plotxy$xtrans() == "probit") {
-      "qnorm(x)"
-    } else {
-      "x"
-    }
-  }
-
-  formula_y <- function() {
-    if (mod_choose_plotxy$ytrans() %in% c("log10", "log2", "log", "sqrt", "exp")) {
-      paste0(mod_choose_plotxy$ytrans(), "(y)")
-    } else if (mod_choose_plotxy$ytrans() == "logit") {
-      "qlogis(y)"
-    } else if (mod_choose_plotxy$ytrans() == "probit") {
-      "qnorm(y)"
-    } else {
-      "y"
-    }
-  }
-
-  regr_factors <- reactive({
-    setdiff(regr_data_filtery() |> colnames(), c("x", "y"))
-  })
-
-  regr_formula <- reactive({
-    if (input$regression_conty == "quadratic") {
-      paste0(
-        formula_y(),
-        " ~ poly(",
-        formula_x(),
-        ", degree = 2, raw = TRUE)"
-      ) |> as.formula()
-    } else if (input$regression_conty == "cubic") {
-      paste0(
-        formula_y(),
-        " ~ poly(",
-        formula_x(),
-        ", degree = 3, raw = TRUE)"
-      ) |> as.formula()
-    } else {
-        paste0(
-          formula_y(),
-          " ~ ",
-          formula_x()
-        ) |> as.formula()
-    }
-
-  })
-
-  ## perform model fitting
-  ## Function
-
-  regr_model_fct <- function(dat, formula) {
-    if (input$regression_conty %in% c("lm", "quadratic", "cubic")) {
-
-      lm(
-        formula = formula,
-        data = dat
-      )
-
-    } else if (input$regression_conty == "loess") {
-
-      loess(
-        formula = formula,
-        data = dat,
-        span = 0.5
-      )
-
-    } else if (input$regression_conty == "glm_binomial") {
-
-      glm(
-        formula = formula,
-        data = dat,
-        family = binomial
-      )
-
-    }
-  }
-
-  ## test for whether data needs splitting
-  data_anyFactor <- reactive({
-    any(grep("Factor", colnames(regr_data_filtery())))
-  })
-
-  ## split data
-
-  data_split <- reactive({
-    if (input$regression_conty != "none") {
-      if (data_anyFactor()) {
-        split(regr_data_filtery(), by = regr_factors(), keep.by = T)
-      } else {
-        regr_data_filtery()
-      }
-    } else {NULL}
-  })
-
-  ## model list
-  regr_modellist <- reactive({
-    if (input$regression_conty != "none" & !is.null(data_split())) {
-      if (data_anyFactor()) {
-        lapply(
-          data_split(),
-          regr_model_fct,
-          formula = regr_formula()
-        )
-      } else {
-        regr_model_fct(dat = data_split(), formula = regr_formula())
-      }
-    } else {NULL}
-  })
-
-  # regr_model <- reactive({
-  #
-  #   if (input$regression_conty %in% c("lm", "quadratic", "cubic")) {
-  #
-  #     lm(
-  #       formula = regr_formula(),
-  #       data = regr_data_filtery()
-  #     )
-  #
-  #   } else if (input$regression_conty == "loess") {
-  #
-  #     loess(
-  #       formula = regr_formula(),
-  #       data = regr_data_filtery(),
-  #       span = 0.5
-  #     )
-  #
-  #   } else if (input$regression_conty == "glm_binomial") {
-  #
-  #     glm(
-  #       formula = regr_formula(),
-  #       data = regr_data_filtery(),
-  #       family = binomial
-  #     )
-  #
-  #   }
-  #
-  # })
-
-
-  ## df for regression plotting
-  # example_dr[, list(x = seq(
-  #   from = min(Viability),
-  #   to = max(Viability),
-  #   length.out = 100
-  # )), by = .(Cell, Compound)]
-  regrdf <- reactive({
-
-    if (input$regression_conty != "none" & !is.null(regr_modellist())) {
-
-      nrow = 100 ## later set higher or make it tunable?
-
-      if (data_anyFactor()) {
-
-        df <- rep(data.table(0), length(data_split()))
-
-        for (i in seq_along(data_split())) {
-          df[[i]] <- data_split()[[i]][, list(
-            x = seq(
-              from = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
-              to = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
-              length.out = nrow
-            ) |> inversetrans(fct = mod_choose_plotxy$xtrans()),
-            y = 0,
-            .SD[1]
-          ), .SDcols = patterns("Factor")]
-
-          if (input$regression_conty == "loess") {
-            predi <- predict(regr_modellist()[[i]], newdata = df[[i]], se = T)
-
-            df[[i]][, `:=`(
-              y = inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit),
-              y_setop = seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans()),
-              t_sebot = seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-            )]
-          } else {
-            predi <- predict(regr_modellist()[[i]], newdata = df[[i]], se.fit = T)
-
-            df[[i]][, `:=`(
-              y = inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit),
-              y_setop = seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans()),
-              t_sebot = seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-            )]
-          }
-
-        }
-
-        df <- rbindlist(df)
-
-      } else {
-        df <- data_split()[, list(
-          x = seq(
-            from = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
-            to = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
-            length.out = nrow
-          ) |> inversetrans(fct = mod_choose_plotxy$xtrans()),
-          y = 0,
-          .SD[1]
-        ), .SDcols = patterns("")]
-
-        if (input$regression_conty == "loess") {
-          predi <- predict(regr_modellist(), newdata = df, se = T)
-
-          df[, `:=`(
-            y = inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit),
-            y_setop = seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans()),
-            t_sebot = seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-          )]
-        } else {
-          predi <- predict(regr_modellist(), newdata = df, se.fit = T)
-
-          df[, `:=`(
-            y = inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit),
-            y_setop = seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans()),
-            t_sebot = seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-          )]
-        }
-
-      }
-
-      return(df)
-
-      # ## old code below ##
-      # nrow <- 50
-      #
-      # data_key <- group_keys(regrdf_group())
-      #
-      # ## empty df
-      # dfi <- rep(list(tibble()), length(regrdf_split()))
-      #
-      # ## group data variables
-      # for (i in seq_along(regrdf_split())) {
-      #   ## x values depend on transformations
-      #   x_expand <- seq(
-      #     from = regrdf_split()[[i]]$x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
-      #     to = regrdf_split()[[i]]$x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
-      #     length.out = nrow
-      #   )
-      #
-      #   ## fill table
-      #   dfi[[i]] <- tibble(
-      #     x = inversetrans(fct = mod_choose_plotxy$xtrans(), x = x_expand),
-      #     y = 0,
-      #     y_setop = 0,
-      #     y_sebot = 0,
-      #     data_key[i,]
-      #   )
-      #
-      #   ## predict function per each regression_cont
-      #   if (input$regression_conty %in% c("lm", "quadratic", "cubic", "glm_binomial")) {
-      #     predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se.fit = T)
-      #
-      #     dfi[[i]]$y <- inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit)
-      #     dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-      #     dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-      #   } else if (input$regression_conty %in% c("loess")) {
-      #     predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se = T)
-      #
-      #     dfi[[i]]$y <- inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit)
-      #     dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-      #     dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-      #   }
-      # }
-      #
-      # return(bind_rows(dfi))
-
-    } else {
-      data.table()
-    }
-
-  })
 
   ## geom_line for drawing the regression predicted values
 
   geom_regression <- reactive({
 
-    if (input$regression_conty != "none") {
+    if (mod_regression$regression_conty() != "none") {
 
       if (data_do()$colorFactor |> is.null() |> suppressWarnings()) {
         geom_line(
           mapping = aes(
             y = y
           ),
-          data = regrdf()
+          data = mod_regression$regrdf()
         )
       } else {
         geom_line(
@@ -666,7 +350,7 @@ app_server <- function( input, output, session ) {
             y = y,
             color = colorFactor
           ),
-          data = regrdf()
+          data = mod_regression$regrdf()
         )
       }
 
@@ -1052,12 +736,10 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
-    regr_data_filtery()
+    mod_regression$regrdf()
   })
 
   output$debug2 <- renderText({
-    as.character(regr_formula())
-
   })
 
   #### session end scripts ####
