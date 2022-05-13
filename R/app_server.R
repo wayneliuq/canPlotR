@@ -455,7 +455,7 @@ app_server <- function( input, output, session ) {
 
   ## test for whether data needs splitting
   data_anyFactor <- reactive({
-    any(grep("Factor", regr_data_filtery()))
+    any(grep("Factor", colnames(regr_data_filtery())))
   })
 
   ## split data
@@ -542,25 +542,58 @@ app_server <- function( input, output, session ) {
             .SD[1]
           ), .SDcols = patterns("Factor")]
 
-          df[[i]][, list(
-            y = predict(regr_modellist[[i]], newdata = .SD)
+          if (input$regression_conty == "loess") {
+            predi <- predict(regr_modellist()[[i]], newdata = df[[i]], se = T)
+
+            df[[i]][, `:=`(
+              y = inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit),
+              y_setop = seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans()),
+              t_sebot = seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
+            )]
+          } else {
+            predi <- predict(regr_modellist()[[i]], newdata = df[[i]], se.fit = T)
+
+            df[[i]][, `:=`(
+              y = inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit),
+              y_setop = seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans()),
+              t_sebot = seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
+            )]
+          }
+
+        }
+
+        df <- rbindlist(df)
+
+      } else {
+        df <- data_split()[, list(
+          x = seq(
+            from = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
+            to = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
+            length.out = nrow
+          ) |> inversetrans(fct = mod_choose_plotxy$xtrans()),
+          y = 0,
+          .SD[1]
+        ), .SDcols = patterns("")]
+
+        if (input$regression_conty == "loess") {
+          predi <- predict(regr_modellist(), newdata = df, se = T)
+
+          df[, `:=`(
+            y = inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit),
+            y_setop = seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans()),
+            t_sebot = seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
+          )]
+        } else {
+          predi <- predict(regr_modellist(), newdata = df, se.fit = T)
+
+          df[, `:=`(
+            y = inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit),
+            y_setop = seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans()),
+            t_sebot = seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
           )]
         }
 
-      } else {}
-
-
-
-      # df <- regr_data_filtery()[, list(
-      #   x = seq(
-      #     from = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
-      #     to = x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
-      #     length.out = nrow
-      #   ) |> inversetrans(fct = mod_choose_plotxy$xtrans())
-      # ), by = regr_factors()]
-
-
-      ## fix here
+      }
 
       return(df)
 
@@ -1019,7 +1052,7 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
-    data_do()
+    regr_data_filtery()
   })
 
   output$debug2 <- renderText({
