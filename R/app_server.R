@@ -23,6 +23,12 @@ app_server <- function( input, output, session ) {
 
   )
 
+  mod_regression <- mod_regression_server(
+    "regression_1",
+    data_do = data_do,
+    xtrans = mod_choose_plotxy$xtrans,
+    ytrans = mod_choose_plotxy$ytrans
+  )
   #### final output plot ####
   ## this is the ggplot2 function which will render the final plot
 
@@ -41,7 +47,6 @@ app_server <- function( input, output, session ) {
       geomcust_violin() +
       geomcust_dotplot() +
       geomcust_point() +
-      geomcust_count() +
 
       # regression geoms
       geom_regression() +
@@ -220,15 +225,6 @@ app_server <- function( input, output, session ) {
       ) #fill is shading, color is border (set both)
     }
   })
-  ## categorical x & y
-  geomcust_count <- reactive({
-    if (input$geomcount) {
-      geom_count(
-        mapping = aes_cust_colourfill(),
-        position = position_dodge(0.85)
-      )
-    }
-  })
 
   #### faceting data by user ####
   ## only facet_grid is planned to be supported
@@ -294,10 +290,8 @@ app_server <- function( input, output, session ) {
   ## get variables for regression df
 
   TruthNoneOrNull <- function(x) {
-    if (isTruthy(x) |> tryCatch(error = function(x) F)) {
-      if (x != "none") {
-        x
-      } else NULL
+    if (x != "none") {
+      get(!!x) |> expr()
     } else NULL
   }
 
@@ -321,205 +315,31 @@ app_server <- function( input, output, session ) {
 
   data_do <- reactive({
 
-    data_get() |> select(
-      x = mod_choose_plotxy$xvar() |> tryCatch(error = function(e) 1),
-      y = mod_choose_plotxy$yvar() |> tryCatch(error = function(e) 1),
-      colorNumeric = color_numeric_var_formdf(),
-      colorFactor = color_factor_var_formdf(),
-      facetHFactor = facet_hvar_formdf(),
-      facetVFactor = facet_vvar_formdf()
-    )
+    data_get()[, list(
+      x = mod_choose_plotxy$xvar() |> get() |> tryCatch(error = function(e) 1),
+      y = mod_choose_plotxy$yvar() |> get() |> tryCatch(error = function(e) 1),
+      colorNumeric = color_numeric_var_formdf() |> eval(),
+      colorFactor = color_factor_var_formdf() |> eval(),
+      facetHFactor = facet_hvar_formdf() |> eval(),
+      facetVFactor = facet_vvar_formdf() |> eval()
+    )]
 
-  })
-
-  ## later build some error handling in case there is nothing left after filter
-  regr_data_filterx <- reactive({
-    if (mod_choose_plotxy$xtrans() %in% c("log10", "log2", "log")) {
-      data_do() |> filter(x > 0)
-    } else if (mod_choose_plotxy$xtrans() %in% c("sqrt")) {
-      data_do() |> filter(x >= 0)
-    } else if (mod_choose_plotxy$xtrans() %in% c("logit", "probit")) {
-      data_do() |> filter(x > 0, x < 1)
-    } else {data_do()}
-  })
-
-  regr_data_filtery <- reactive({
-    if (mod_choose_plotxy$ytrans() %in% c("log10", "log2", "log")) {
-      regr_data_filterx() |> filter(y > 0)
-    } else if (mod_choose_plotxy$ytrans() %in% c("sqrt")) {
-      regr_data_filterx() |> filter(y >= 0)
-    } else if (mod_choose_plotxy$ytrans() %in% c("logit", "probit") | input$regression_conty %in% c("glm_binomial")) {
-      regr_data_filterx() |> filter(y > 0, y < 1)
-    } else {regr_data_filterx()}
   })
 
   #### regression logics ####
-  ## perform regression on split data ##
-  regrdf_group <- reactive({
-    regr_data_filtery() |>
-      group_by(
-        across(
-          all_of(
-            grep("Factor", colnames(regr_data_filtery()), value = T)
-          )
-        )
-      )
-  })
-
-  regrdf_split <- reactive({
-    regrdf_group() |> group_split()
-  })
-
-  ## function to generate formula for x and y ##
-  formula_x <- function() {
-    if (mod_choose_plotxy$xtrans() %in% c("log10", "log2", "log", "sqrt", "exp")) {
-      paste0(mod_choose_plotxy$xtrans(), "(x)")
-    } else if (mod_choose_plotxy$xtrans() == "logit") {
-      "qlogis(x)"
-    } else if (mod_choose_plotxy$xtrans() == "probit") {
-      "qnorm(x)"
-    } else {
-      "x"
-    }
-  }
-
-  formula_y <- function() {
-    if (mod_choose_plotxy$ytrans() %in% c("log10", "log2", "log", "sqrt", "exp")) {
-      paste0(mod_choose_plotxy$ytrans(), "(y)")
-    } else if (mod_choose_plotxy$ytrans() == "logit") {
-      "qlogis(y)"
-    } else if (mod_choose_plotxy$ytrans() == "probit") {
-      "qnorm(y)"
-    } else {
-      "y"
-    }
-  }
-
-  regr_formula <- reactive({
-    if (input$regression_conty == "quadratic") {
-      paste0(
-        formula_y(),
-        " ~ poly(",
-        formula_x(),
-        ", degree = 2, raw = TRUE)"
-      ) |> as.formula()
-    } else if (input$regression_conty == "cubic") {
-      paste0(
-        formula_y(),
-        " ~ poly(",
-        formula_x(),
-        ", degree = 3, raw = TRUE)"
-      ) |> as.formula()
-    } else {
-        paste0(
-          formula_y(),
-          " ~ ",
-          formula_x()
-        ) |> as.formula()
-    }
-
-  })
-
-  ## perform model fitting
-  regr_model <- reactive({
-
-    if (input$regression_conty %in% c("lm", "quadratic", "cubic")) {
-
-      lapply(
-        X = regrdf_split(),
-        FUN = lm,
-        formula = regr_formula()
-      )
-
-    } else if (input$regression_conty == "loess") {
-
-      lapply(
-        X = regrdf_split(),
-        FUN = loess,
-        formula = regr_formula(),
-        span = 0.5
-      )
-
-    } else if (input$regression_conty == "glm_binomial") {
-
-      lapply(
-        X = regrdf_split(),
-        FUN = glm,
-        formula = regr_formula(),
-        family = binomial
-
-      )
-
-    }
-
-  })
-
-  ## df for regression plotting
-
-  regrdf <- reactive({
-
-    if (input$regression_conty != "none") {
-      nrow <- 50
-
-      data_key <- group_keys(regrdf_group())
-
-      ## empty df
-      dfi <- rep(list(tibble()), length(regrdf_split()))
-
-      ## group data variables
-      for (i in seq_along(regrdf_split())) {
-        ## x values depend on transformations
-        x_expand <- seq(
-          from = regrdf_split()[[i]]$x |> transvar(fct = mod_choose_plotxy$xtrans()) |> min(),
-          to = regrdf_split()[[i]]$x |> transvar(fct = mod_choose_plotxy$xtrans()) |> max(),
-          length.out = nrow
-        )
-
-        ## fill table
-        dfi[[i]] <- tibble(
-          x = inversetrans(fct = mod_choose_plotxy$xtrans(), x = x_expand),
-          y = 0,
-          y_setop = 0,
-          y_sebot = 0,
-          data_key[i,]
-        )
-
-        ## predict function per each regression_cont
-        if (input$regression_conty %in% c("lm", "quadratic", "cubic", "glm_binomial")) {
-          predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se.fit = T)
-
-          dfi[[i]]$y <- inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit)
-          dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-          dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-        } else if (input$regression_conty %in% c("loess")) {
-          predi <- predict(regr_model()[[i]], newdata = dfi[[i]], se = T)
-
-          dfi[[i]]$y <- inversetrans(fct = mod_choose_plotxy$ytrans(), predi$fit)
-          dfi[[i]]$y_setop <- seFind(fct = max, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-          dfi[[i]]$y_sebot <- seFind(fct = min, fit = predi$fit, se = predi$se.fit, trans = mod_choose_plotxy$ytrans())
-        }
-      }
-
-      return(bind_rows(dfi))
-
-    } else {
-      data_do()
-    }
-
-  })
 
   ## geom_line for drawing the regression predicted values
 
   geom_regression <- reactive({
 
-    if (input$regression_conty != "none") {
+    if (mod_regression$regression_conty() != "none") {
 
       if (data_do()$colorFactor |> is.null() |> suppressWarnings()) {
         geom_line(
           mapping = aes(
             y = y
           ),
-          data = regrdf()
+          data = mod_regression$regrdf()
         )
       } else {
         geom_line(
@@ -527,7 +347,7 @@ app_server <- function( input, output, session ) {
             y = y,
             color = colorFactor
           ),
-          data = regrdf()
+          data = mod_regression$regrdf()
         )
       }
 
@@ -543,24 +363,14 @@ app_server <- function( input, output, session ) {
 
     if (!mod_data_load$use_example_data()) {
 
-      ## find the file type of the user uploaded data
-
-      if (tools::file_ext(mod_data_load$data_user_path()) == "xls") {
-        readxl::read_xls(mod_data_load$data_user_path())
-      } else if (tools::file_ext(mod_data_load$data_user_path()) == "xlsx") {
-        readxl::read_xlsx(mod_data_load$data_user_path())
-      } else if (tools::file_ext(mod_data_load$data_user_path()) %in% c("txt", "csv")) {
-        readr::read_delim(mod_data_load$data_user_path())
-      }
+      fread(mod_data_load$data_user_path())
 
     } else if (mod_data_load$example_dataset() == 1) {
       data("example_dr", envir = environment()); example_dr
     } else if (mod_data_load$example_dataset() == 2) {
-      data("example_HairEye", envir = environment()); example_HairEye
-    } else if (mod_data_load$example_dataset() == 3) {
-      data("example_ChickWeight", envir = environment()); example_ChickWeight
+      data("example_ChickWeight", envir = environment()); example_HairEye
     } else {
-        tibble()
+      data.table()
     }
   }) |>
     bindEvent(mod_data_load$data_load_btn())# bindEvent(input$data_load)
@@ -569,37 +379,40 @@ app_server <- function( input, output, session ) {
   ## later modify group_by so it incorporates facets, and mappings e.g. (color/fill)
   ## also include summary statistics where both variables are factors
   ## and where both variables are numeric
-  data_summary <- reactive({
 
-    if (
-      (xvar_iscategorical()) |>
-      tryCatch(error = function(e) F)
-    ) {
-      data_get() |>
-        group_by("x" = get(mod_choose_plotxy$xvar())) |> ## need to fix so summary displays the x variable name
-        summarise(
-          count = n(),
-          mean = mean(get(mod_choose_plotxy$yvar()), na.rm = T),
-          median = median(get(mod_choose_plotxy$yvar()), na.rm = T),
-          "geometric_mean" = geomean(get(mod_choose_plotxy$yvar()), na.rm = T),
-          variance = var(get(mod_choose_plotxy$yvar()), na.rm = T),
-          "standard_deviation" = sd(get(mod_choose_plotxy$yvar()), na.rm = T),
-          "standard_error_of_mean" = sd(get(mod_choose_plotxy$yvar()), na.rm = T) / sqrt(n()),
-          "median_absolute_deviation" = mad(get(mod_choose_plotxy$yvar()), na.rm = T)
-        )
-    } else {
-      tibble(error = "error")
-    }
+  ## to be updated later
 
-  })
+  # data_summary <- reactive({
+  #
+  #   if (
+  #     (xvar_iscategorical()) |>
+  #     tryCatch(error = function(e) F)
+  #   ) {
+  #     data_get() |>
+  #       group_by("x" = get(mod_choose_plotxy$xvar())) |> ## need to fix so summary displays the x variable name
+  #       summarise(
+  #         count = n(),
+  #         mean = mean(get(mod_choose_plotxy$yvar()), na.rm = T),
+  #         median = median(get(mod_choose_plotxy$yvar()), na.rm = T),
+  #         "geometric_mean" = geomean(get(mod_choose_plotxy$yvar()), na.rm = T),
+  #         variance = var(get(mod_choose_plotxy$yvar()), na.rm = T),
+  #         "standard_deviation" = sd(get(mod_choose_plotxy$yvar()), na.rm = T),
+  #         "standard_error_of_mean" = sd(get(mod_choose_plotxy$yvar()), na.rm = T) / sqrt(n()),
+  #         "median_absolute_deviation" = mad(get(mod_choose_plotxy$yvar()), na.rm = T)
+  #       )
+  #   } else {
+  #     tibble(error = "error")
+  #   }
+  #
+  # })
 
-  output$datasummary <- reactable::renderReactable({
-    reactable::reactable(data_summary(),
-                         showPageSizeOptions = T,
-                         pageSizeOptions = c(10, 25, 50, 100),
-                         resizable = T,
-                         defaultPageSize = 10)
-  })
+  # output$datasummary <- reactable::renderReactable({
+  #   reactable::reactable(data_summary(),
+  #                        showPageSizeOptions = T,
+  #                        pageSizeOptions = c(10, 25, 50, 100),
+  #                        resizable = T,
+  #                        defaultPageSize = 10)
+  # })
 
   #### show data table preview ####
   output$datatable <- reactable::renderReactable({
@@ -616,12 +429,12 @@ app_server <- function( input, output, session ) {
   # need to optimize script to avoid using tryCatch as it is computationally expensive
 
   xvar_isnumeric <- reactive({
-    (data_get() |> pull(mod_choose_plotxy$xvar()) |> is.numeric()) |>
+    (data_get()[, mod_choose_plotxy$xvar() |> get() |> is.numeric()]) |>
       tryCatch(error = function(e) {F})
   })
 
   yvar_isnumeric <- reactive({
-    (data_get() |> pull(mod_choose_plotxy$yvar()) |> is.numeric()) |>
+    (data_get()[, mod_choose_plotxy$yvar() |> get() |> is.numeric()]) |>
       tryCatch(error = function(e) {F})
   })
 
@@ -648,16 +461,16 @@ app_server <- function( input, output, session ) {
 
   ## add UI element to choose separating data
   data_vars <- reactive({
-    (data_get() |> colnames()) |>
-      tryCatch(error = function(e) character(0))
+    (data_get() |> colnames()) # |>
+    #  tryCatch(error = function(e) character(0))
   })
 
   ## separate numeric variables
   ## or else it will be too confusing for users, coloring vs splitting data
 
   data_vars_numeric <- reactive({
-    data_get() |> select(where(is.numeric)) |> colnames() |>
-      tryCatch(error = function(e) character(0))
+    data_get()[, names(.SD), .SDcols = is.numeric] #|>
+      #tryCatch(error = function(e) character(0))
   })
 
   observe({
@@ -778,17 +591,13 @@ app_server <- function( input, output, session ) {
 
   #### get the factor levels of variables ####
   GetColLevelsCatch <- function(dat, col, error_output) {
-    (dat |> pull(col) |> factor() |> levels()) |>
+    dat[[col]] |> factor() |> levels() |>
       tryCatch(error = function(e) error_output)
   }
 
   x_factorlevels_default <- reactive({
     GetColLevelsCatch(data_do(), "x", "NA")
   })
-
-  # y_factorlevels_default <- reactive({
-  #   GetColLevelsCatch(data_do(), "y", "NA")
-  # })
 
   color_factorlevels_default <- reactive({
     GetColLevelsCatch(data_do(), "colorFactor", "NA")
@@ -838,12 +647,10 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
-
+    mod_regression$regrdf()
   })
 
   output$debug2 <- renderText({
-    mod_data_load$example_dataset()
-
   })
 
   #### session end scripts ####

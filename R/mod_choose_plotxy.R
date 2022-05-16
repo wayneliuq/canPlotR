@@ -220,7 +220,7 @@ mod_choose_plotxy_ui <- function(id){
 #' choose_plotxy Server Functions
 #'
 #' @noRd
-mod_choose_plotxy_server <- function(id, 
+mod_choose_plotxy_server <- function(id,
                                      data_load_btn,
                                      data_vars,
                                      data_vars_numeric,
@@ -228,24 +228,24 @@ mod_choose_plotxy_server <- function(id,
                                      color_factorlevels,
                                      facet_h_factorlevels,
                                      facet_v_factorlevels){
-  
+
   moduleServer( id, function(input, output, session){
     ns <- session$ns
-    
+
     #### observer which updates x and y column choices ####
     ## to-do: bind observers to data loading
     observe({
       if (tryCatch(isTruthy(data_vars_numeric()), error = function(e) F)) {
         updateSelectInput(session,
                           inputId = "xvar",
-                          choices = data_vars(), 
+                          choices = data_vars(),
                           selected = 1)
-        
+
         updateSelectInput(session,
                           inputId = "yvar",
                           choices = data_vars_numeric(), ## here
                           selected = 1)
-      } else if (isTruthy(data_vars() |> tryCatch(error = function(e) F))) { 
+      } else if (isTruthy(data_vars() |> tryCatch(error = function(e) F))) {
         shinyWidgets::sendSweetAlert(
           title = "No numeric variables detected",
           type = "error",
@@ -264,7 +264,7 @@ mod_choose_plotxy_server <- function(id,
         )
       }
     }) |> bindEvent(data_load_btn()) # bindEvent(input$data_load)
-    
+
     #### observer which updates color_factor and facet choices
     observe({
       shinyWidgets::updatePickerInput(
@@ -272,21 +272,21 @@ mod_choose_plotxy_server <- function(id,
         inputId = "color_factor_var",
         choices = c("none", data_vars())
       )
-      
+
       shinyWidgets::updatePickerInput(
         session,
         inputId = "facet_hvar",
         choices = c("none", data_vars())
       )
-      
+
       shinyWidgets::updatePickerInput(
         session,
         inputId = "facet_vvar",
         choices = c("none", data_vars())
       )
-      
+
     })
-    
+
     #### observers that update factor levels for ordering ####
     observe({
       shinyjqui::updateOrderInput(
@@ -295,7 +295,7 @@ mod_choose_plotxy_server <- function(id,
         items = x_factorlevels()
       )
     })
-    
+
     observe({
       shinyjqui::updateOrderInput(
         session,
@@ -303,7 +303,7 @@ mod_choose_plotxy_server <- function(id,
         items = color_factorlevels()
       )
     })
-    
+
     observe({
       shinyjqui::updateOrderInput(
         session,
@@ -311,7 +311,7 @@ mod_choose_plotxy_server <- function(id,
         items = facet_h_factorlevels()
       )
     })
-    
+
     observe({
       shinyjqui::updateOrderInput(
         session,

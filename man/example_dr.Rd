@@ -21,7 +21,7 @@ Author's dataset.
 example_dr
 }
 \description{
-A dataset containing the viability response of two cell lines to 
+A dataset containing the viability response of two cell lines to
 different concentrations of series of investigative compounds. There
 are two technical replicates for each compound/concentration combination.
 }
