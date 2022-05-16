@@ -103,15 +103,15 @@ app_ui <- function(request) {
             shinyWidgets::dropdown(
               label = "Export Figure",
 
-              ## export resolution
+              ## export file type
               shinyWidgets::pickerInput(
                 inputId = "export_filetype",
                 label = "Filetype",
-                choices = c("png", "pdf"), # can expand to more filetypes supported by ggsave
-                selected = 1
+                choices = sort(c("png", "pdf", "jpeg", "bmp", "svg", "eps", "tex", "tiff")), # can expand to more filetypes supported by ggsave
+                selected = "png"
               ),
 
-              ## export size
+              ## export resolution
               shinyWidgets::sliderTextInput(
                 inputId = "export_resolution",
                 label = "Resolution",
@@ -122,6 +122,52 @@ app_ui <- function(request) {
                 position = "right",
                 message = "Select the desired resolution (pixels per inch) of
                 the exported figure."
+              ),
+
+              ## export size
+              # also a button to get size from the current preview
+              fluidRow(
+
+                column(
+                  width = 4,
+                  numericInput(
+                    inputId = "export_width",
+                    label = "Width:",
+                    value = 800,
+                    min = 0,
+                    max = 50000,
+                    step = 10,
+                    width = "50%"
+                  )
+                ),
+
+                column(
+                  width = 4,
+                  numericInput(
+                    inputId = "export_height",
+                    label = "Height:",
+                    value = 500,
+                    min = 0,
+                    max = 50000,
+                    step = 10,
+                    width = "50%"
+                  )
+                ),
+
+                column(
+                  width = 4,
+                  actionButton(
+                    inputId = "export_getdimensions",
+                    label = "Get preview dimensions"
+                  ) |> prompter::add_prompt(
+                    size = "medium",
+                    position = "right",
+                    message = "Click this button to retrieve the dimensions of the
+                    preview figure. The dimensions are automatically adjusted
+                    for the resolution you selected above."
+                  )
+                )
+
               ),
 
               ## download button

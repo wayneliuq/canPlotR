@@ -97,8 +97,8 @@ app_server <- function( input, output, session ) {
         plot = final_ggplot(),
         device = input$export_filetype,
         scale = 1,
-        width = 500, # calculate from dpi later
-        height = 600,
+        width = input$export_width, # calculate from dpi later
+        height = input$export_height,
         units = "px",
         dpi = as.integer(input$export_resolution)
       )
