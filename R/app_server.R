@@ -105,6 +105,23 @@ app_server <- function( input, output, session ) {
     }
   )
 
+  ## use preview dimensions
+  observe({
+    if (input$export_previewdims) {
+      updateNumericInput(
+        session,
+        inputId = "export_width",
+        value = input$plot_size[[1]] / 72 * input$export_resolution
+      )
+
+      updateNumericInput(
+        session,
+        inputId = "export_height",
+        value = input$plot_size[[2]] / 72 * input$export_resolution
+      )
+    }
+  })
+
   #### misc labels ####
   ## legend titles
   # automatically take the column title
@@ -647,10 +664,10 @@ app_server <- function( input, output, session ) {
 
   #### debug console ####
   output$debug <- renderTable({
-    mod_regression$regrdf()
   })
 
   output$debug2 <- renderText({
+    input$plot_size[[1]]
   })
 
   #### session end scripts ####

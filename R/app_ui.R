@@ -137,7 +137,7 @@ app_ui <- function(request) {
                     min = 0,
                     max = 50000,
                     step = 10,
-                    width = "50%"
+                    width = "90%"
                   )
                 ),
 
@@ -150,21 +150,21 @@ app_ui <- function(request) {
                     min = 0,
                     max = 50000,
                     step = 10,
-                    width = "50%"
+                    width = "90%"
                   )
                 ),
 
                 column(
                   width = 4,
-                  actionButton(
-                    inputId = "export_getdimensions",
-                    label = "Get preview dimensions"
+                  checkboxInput(
+                    inputId = "export_previewdims",
+                    label = "Use preview dimensions"
                   ) |> prompter::add_prompt(
                     size = "medium",
                     position = "right",
-                    message = "Click this button to retrieve the dimensions of the
-                    preview figure. The dimensions are automatically adjusted
-                    for the resolution you selected above."
+                    message = "Click to disable custom dimensions and use the
+                    dimensions of the preview figure. The dimensions are
+                    automatically scaled for the resolution you have selected."
                   )
                 )
 
