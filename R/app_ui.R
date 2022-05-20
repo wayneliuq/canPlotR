@@ -40,11 +40,9 @@ app_ui <- function(request) {
               size = "large",
               message = "Enter the name for this plot here.
                  This name will be used as the title, and for
-                 naming the exported plot.")
-        ),
+                 naming the exported plot."),
 
         #### data input box ####
-        wellPanel(
           mod_data_load_ui("data_load_1") ## to-do: hide element when data loaded, but show button for (upload new data)
         ),
 
@@ -63,6 +61,7 @@ app_ui <- function(request) {
       column(
         width = 6,
 
+        wellPanel(
         tabsetPanel(
           #### main plot output ####
           tabPanel(
@@ -77,25 +76,39 @@ app_ui <- function(request) {
               shinyWidgets::dropdown(
                 label = "Download Plot",
 
-                ## export file type
-                shinyWidgets::pickerInput(
-                  inputId = "export_filetype",
-                  label = "Filetype",
-                  choices = sort(c("png", "pdf", "jpeg", "bmp", "svg", "eps", "tex", "tiff")), # can expand to more filetypes supported by ggsave
-                  selected = "png"
-                ),
+                fluidRow(
+                  ## export file type
 
-                ## export resolution
-                shinyWidgets::sliderTextInput(
-                  inputId = "export_resolution",
-                  label = "Resolution",
-                  choices = c(36, 72, 100, 200, 300, 600),
-                  selected = "72"
-                ) |> prompter::add_prompt(
-                  size = "medium",
-                  position = "right",
-                  message = "Select the desired resolution (pixels per inch) of
-                  the exported figure."
+                  column(
+                    width = 6,
+
+                    shinyWidgets::pickerInput(
+                      inputId = "export_filetype",
+                      label = "Filetype",
+                      choices = sort(c("png", "pdf", "jpeg", "bmp", "svg", "eps", "tex", "tiff")), # can expand to more filetypes supported by ggsave
+                      selected = "png"
+                    )
+
+                  ),
+
+                  ## export resolution
+                  column(
+                    width = 6,
+
+                    shinyWidgets::sliderTextInput(
+                      inputId = "export_resolution",
+                      label = "Resolution",
+                      choices = c(36, 72, 100, 150, 200, 300),
+                      selected = "72",
+                      width = "100%"
+                    ) |> prompter::add_prompt(
+                      size = "medium",
+                      position = "right",
+                      message = "Select the desired resolution (pixels per inch) of
+                      the exported figure."
+                    )
+                  )
+
                 ),
 
                 ## export size
@@ -162,6 +175,7 @@ app_ui <- function(request) {
             "To be updated"
           )
         )
+      )
 
       ),
 
