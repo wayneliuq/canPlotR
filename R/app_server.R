@@ -111,13 +111,13 @@ app_server <- function( input, output, session ) {
       updateNumericInput(
         session,
         inputId = "export_width",
-        value = input$plot_size[[1]] / 72 * input$export_resolution
+        value = round(input$plot_size[[1]] / 72 * input$export_resolution, 1)
       )
 
       updateNumericInput(
         session,
         inputId = "export_height",
-        value = input$plot_size[[2]] / 72 * input$export_resolution
+        value = round(input$plot_size[[2]] / 72 * input$export_resolution, 1)
       )
     }
   })

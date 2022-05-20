@@ -19,169 +19,155 @@ app_ui <- function(request) {
       theme = shinythemes::shinytheme("paper"),
 
       #### title ####
-
       titlePanel(
         title = "canPlotR", ## later reduce text size
         windowTitle = "canPlotR"
       ),
+      #### new page edits begin here ####
+      column(
+        width = 6,
 
-      #### main page ####
-
-      fluidRow(
-
-        #### plot data elements ####
-
-        column(
-          width = 6,
-          wellPanel(
-            tags$h5("Plot Data"),
-            tabsetPanel(
-
-              #### upload and select data ####
-              tabPanel(
-                title = "1. Select Data",
-
-                ## plot name
-                fluidRow(
-                  textInput(inputId = "plotid",
-                            label = "Plot Name",
-                            placeholder = "plot",
-                            width = "100%") |>
-                    prompter::add_prompt(
-                      position = "right",
-                      size = "large",
-                      message = "Enter the name for this plot here.
-                         This name will be used as the title, and for
-                         exporting the exported plot.")
-                ),
-
-
-                ## select data set
-                fluidRow(
-                  mod_data_load_ui("data_load_1")
-                )
-              ),
-
-              tabPanel(
-                title = "2. Choose Variables",
-
-                #### choose columns to plot ####
-                mod_choose_plotxy_ui("choose_plotxy_1")
-
-              ),
-
-              #### statistics and regression ####
-              tabPanel(
-                title = "3. Regression",
-                mod_regression_ui("regression_1")
-              )
-            )
-          )
+        #### plot name ####
+        ## should this be in visual options?
+        wellPanel(
+          textInput(inputId = "plotid",
+                    label = "Plot Name",
+                    value = "canPlotR",
+                    placeholder = "plot name",
+                    width = "100%") |>
+            prompter::add_prompt(
+              position = "right",
+              size = "large",
+              message = "Enter the name for this plot here.
+                 This name will be used as the title, and for
+                 naming the exported plot.")
         ),
 
-        #### main plot output ####
+        #### data input box ####
+        wellPanel(
+          mod_data_load_ui("data_load_1") ## to-do: hide element when data loaded, but show button for (upload new data)
+        ),
 
-        column(
-          width = 6,
+        #### choose x and y elements ####
+        wellPanel(
+          mod_choose_plotxy_ui("choose_plotxy_1")
+        ),
 
-                    # make resizable with shinyjqui
-          # With mouse interactions attached, the corresponding interaction
-          # states, e.g. position of draggable, size of resizable, selected of
-          # selectable and order of sortable, will be sent to server side in the
-          # form of input$<id>_<state>. The default values can be overridden by
-          # setting the shiny option in the options parameter. Please see the
-          # vignette Introduction to shinyjqui for more details.
+        #### statistics and regression ####
+        wellPanel(
+          mod_regression_ui("regression_1")
+        )
 
-          fluidRow(
-            plotOutput("plot") |>
-              shinyjqui::jqui_resizable()
-          ),
+      ),
 
+      column(
+        width = 6,
 
-          ## export dropdown menu
-          fluidRow(
-            shinyWidgets::dropdown(
-              label = "Export Figure",
+        tabsetPanel(
+          #### main plot output ####
+          tabPanel(
+            title = "Plot",
+            fluidRow(
+              plotOutput("plot") |>
+                shinyjqui::jqui_resizable()
+            ),
 
-              ## export file type
-              shinyWidgets::pickerInput(
-                inputId = "export_filetype",
-                label = "Filetype",
-                choices = sort(c("png", "pdf", "jpeg", "bmp", "svg", "eps", "tex", "tiff")), # can expand to more filetypes supported by ggsave
-                selected = "png"
-              ),
+            #### download button ####
+            fluidRow(
+              shinyWidgets::dropdown(
+                label = "Download Plot",
 
-              ## export resolution
-              shinyWidgets::sliderTextInput(
-                inputId = "export_resolution",
-                label = "Resolution",
-                choices = c(36, 72, 100, 200, 300, 600),
-                selected = "72"
-              ) |> prompter::add_prompt(
-                size = "medium",
-                position = "right",
-                message = "Select the desired resolution (pixels per inch) of
-                the exported figure."
-              ),
-
-              ## export size
-              # also a button to get size from the current preview
-              fluidRow(
-
-                column(
-                  width = 4,
-                  numericInput(
-                    inputId = "export_width",
-                    label = "Width:",
-                    value = 800,
-                    min = 0,
-                    max = 50000,
-                    step = 10,
-                    width = "90%"
-                  )
+                ## export file type
+                shinyWidgets::pickerInput(
+                  inputId = "export_filetype",
+                  label = "Filetype",
+                  choices = sort(c("png", "pdf", "jpeg", "bmp", "svg", "eps", "tex", "tiff")), # can expand to more filetypes supported by ggsave
+                  selected = "png"
                 ),
 
-                column(
-                  width = 4,
-                  numericInput(
-                    inputId = "export_height",
-                    label = "Height:",
-                    value = 500,
-                    min = 0,
-                    max = 50000,
-                    step = 10,
-                    width = "90%"
-                  )
+                ## export resolution
+                shinyWidgets::sliderTextInput(
+                  inputId = "export_resolution",
+                  label = "Resolution",
+                  choices = c(36, 72, 100, 200, 300, 600),
+                  selected = "72"
+                ) |> prompter::add_prompt(
+                  size = "medium",
+                  position = "right",
+                  message = "Select the desired resolution (pixels per inch) of
+                  the exported figure."
                 ),
 
-                column(
-                  width = 4,
-                  checkboxInput(
-                    inputId = "export_previewdims",
-                    label = "Use preview dimensions"
-                  ) |> prompter::add_prompt(
-                    size = "medium",
-                    position = "right",
-                    message = "Click to disable custom dimensions and use the
-                    dimensions of the preview figure. The dimensions are
-                    automatically scaled for the resolution you have selected."
+                ## export size
+                # also a button to get size from the current preview
+                fluidRow(
+
+                  column(
+                    width = 4,
+                    numericInput(
+                      inputId = "export_width",
+                      label = "Width:",
+                      value = 800,
+                      min = 0,
+                      max = 50000,
+                      step = 10,
+                      width = "90%"
+                    )
+                  ),
+
+                  column(
+                    width = 4,
+                    numericInput(
+                      inputId = "export_height",
+                      label = "Height:",
+                      value = 500,
+                      min = 0,
+                      max = 50000,
+                      step = 10,
+                      width = "90%"
+                    )
+                  ),
+
+                  column(
+                    width = 4,
+                    checkboxInput(
+                      inputId = "export_previewdims",
+                      label = "Use preview dimensions"
+                    ) |> prompter::add_prompt(
+                      size = "medium",
+                      position = "right",
+                      message = "Click to disable custom dimensions and use the
+                      dimensions of the preview figure. The dimensions are
+                      automatically scaled for the resolution you have selected."
+                    )
                   )
+
+                ),
+
+                ## download button
+                downloadButton(
+                  "plot_download",
+                  label = "Export plot",
+                  class = "btn-success"
                 )
 
-              ),
-
-              ## download button
-              downloadButton(
-                "plot_download",
-                label = "Export plot",
-                class = "btn-success"
               )
-
             )
+
+          ),
+
+          #### statistics output ####
+          tabPanel(
+            title = "Statistics",
+            "To be updated"
           )
         )
 
       ),
+
+
+      #### new page edits end here ####
+      #### main page ####
 
       fluidRow(
 
@@ -390,6 +376,8 @@ app_ui <- function(request) {
           )
         )
       )
+
+      #### main page ends here
 
     )
   )
