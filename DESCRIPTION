@@ -18,8 +18,6 @@ Imports:
     processx,
     prompter,
     reactable,
-    readr,
-    readxl,
     rlang,
     shiny,
     shinybusy,
@@ -28,7 +26,7 @@ Imports:
     shinyWidgets
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.0
 Suggests: 
     spelling,
     testthat (>= 3.0.0)

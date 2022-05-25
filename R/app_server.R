@@ -19,8 +19,8 @@ app_server <- function( input, output, session ) {
     data_vars_numeric = data_vars_numeric,
     color_factorlevels = color_factorlevels_default,
     facet_h_factorlevels = facet_h_factorlevels_default,
-    facet_v_factorlevels = facet_v_factorlevels_default
-
+    facet_v_factorlevels = facet_v_factorlevels_default,
+    xvar_iscategorical = xvar_iscategorical
   )
 
   mod_regression <- mod_regression_server(
@@ -573,38 +573,7 @@ app_server <- function( input, output, session ) {
     # }
   })
 
-  ## if variable is factor, do not allow selection of transformation
-  ## or user will be confused
-  ## fixes are needed here, cannot apply transformation to numeric values
-  observe({
-    disabled_choices <- trans_continuous != "identity"
 
-    if (xvar_iscategorical()) {
-      shinyWidgets::updatePickerInput(
-        session = session,
-        inputId = "xtrans",
-        choices = trans_continuous,
-        choicesOpt = list(disabled = disabled_choices,
-                          style = ifelse(disabled_choices,
-                                         yes = "color: rgba(119, 119, 119, 0.5);",
-                                         no = ""))
-
-      )
-    } else {
-      shinyWidgets::updatePickerInput(
-        session = session,
-        inputId = "xtrans",
-        choices = trans_continuous
-      )
-    }
-
-      shinyWidgets::updatePickerInput(
-        session = session,
-        inputId = "ytrans",
-        choices = trans_continuous
-      )
-
-  })
 
   #### get the factor levels of variables ####
   GetColLevelsCatch <- function(dat, col, error_output) {

@@ -227,7 +227,8 @@ mod_choose_plotxy_server <- function(id,
                                      x_factorlevels,
                                      color_factorlevels,
                                      facet_h_factorlevels,
-                                     facet_v_factorlevels){
+                                     facet_v_factorlevels,
+                                     xvar_iscategorical){
 
   moduleServer( id, function(input, output, session){
     ns <- session$ns
@@ -264,6 +265,33 @@ mod_choose_plotxy_server <- function(id,
         )
       }
     }) |> bindEvent(data_load_btn()) # bindEvent(input$data_load)
+
+    #### observer for disable xvar transform ####
+    ## if variable is factor, do not allow selection of transformation
+    ## or user will be confused
+    ## fixes are needed here, cannot apply transformation to numeric values
+    observe({
+      disabled_choices <- transformContinuous() != "identity"
+
+      if (xvar_iscategorical()) {
+        shinyWidgets::updatePickerInput(
+          session = session,
+          inputId = "xtrans",
+          choices = transformContinuous(),
+          choicesOpt = list(disabled = disabled_choices,
+                            style = ifelse(disabled_choices,
+                                           yes = "color: rgba(119, 119, 119, 0.5);",
+                                           no = ""))
+
+        )
+      } else {
+        shinyWidgets::updatePickerInput(
+          session = session,
+          inputId = "xtrans",
+          choices = transformContinuous()
+        )
+      }
+    })
 
     #### observer which updates color_factor and facet choices
     observe({
